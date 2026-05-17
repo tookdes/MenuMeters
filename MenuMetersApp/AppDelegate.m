@@ -9,6 +9,7 @@
 #import "AppDelegate.h"
 #import "MenuMeterCPUExtra.h"
 #import "MenuMeterDiskExtra.h"
+#import "MenuMeterGPUExtra.h"
 #import "MenuMeterMemExtra.h"
 #import "MenuMeterNetExtra.h"
 #import "MenuMetersPref.h"
@@ -25,6 +26,7 @@
 {
     MenuMeterCPUExtra*cpuExtra;
     MenuMeterDiskExtra*diskExtra;
+    MenuMeterGPUExtra*gpuExtra;
     MenuMeterNetExtra*netExtra;
     MenuMeterMemExtra*memExtra;
     MenuMetersPref*pref;
@@ -91,6 +93,7 @@
     // which is even worse.
     // When extras are inited last, at least the updater and the pref pane are live.
     cpuExtra=[[MenuMeterCPUExtra alloc] init];
+    gpuExtra=[[MenuMeterGPUExtra alloc] init];
     diskExtra=[[MenuMeterDiskExtra alloc] init];
     netExtra=[[MenuMeterNetExtra alloc] init];
     memExtra=[[MenuMeterMemExtra alloc] init];

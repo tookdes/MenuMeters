@@ -23,6 +23,7 @@
 
 #import "MenuMeterDefaults.h"
 #import "MenuMeterCPU.h"
+#import "MenuMeterGPU.h"
 #import "MenuMeterMem.h"
 #import "MenuMeterDisk.h"
 #import "MenuMeterNet.h"
@@ -317,6 +318,79 @@
 
 ///////////////////////////////////////////////////////////////
 //
+//  GPU menu prefs
+//
+///////////////////////////////////////////////////////////////
+
+- (double)gpuInterval {
+    return [self loadDoublePref:kGPUIntervalPref
+                       lowBound:kGPUUpdateIntervalMin
+                      highBound:kGPUUpdateIntervalMax
+                   defaultValue:kGPUUpdateIntervalDefault];
+}
+
+- (int)gpuDisplayMode {
+    return [self loadBitFlagPref:kGPUDisplayModePref
+                      validFlags:(kGPUDisplayPercent | kGPUDisplayGraph | kGPUDisplayFrequency | kGPUDisplayPower | kGPUDisplayANEPower)
+                    defaultValue:kGPUDisplayDefault];
+}
+
+- (int)gpuGraphLength {
+    return [self loadIntPref:kGPUGraphLengthPref
+                    lowBound:kGPUGraphWidthMin
+                   highBound:kGPUGraphWidthMax
+                defaultValue:kGPUGraphWidthDefault];
+}
+
+- (NSColor *)gpuColor {
+    return [self loadColorPref:kGPUColorPref defaultValue:kGPUColorDefault];
+}
+
+- (NSColor *)gpuTextColor {
+    return [self loadColorPref:kGPUTextColorPref defaultValue:kGPUTextColorDefault];
+}
+
+- (NSColor *)gpuANEColor {
+    return [self loadColorPref:kGPUANEColorPref defaultValue:kGPUANEColorDefault];
+}
+
+- (void)saveGpuInterval:(double)interval {
+    [self saveDoublePref:kGPUIntervalPref value:interval];
+}
+
+- (void)saveGpuDisplayMode:(int)mode {
+    [self saveIntPref:kGPUDisplayModePref value:mode];
+}
+
+- (void)saveGpuGraphLength:(int)length {
+    [self saveIntPref:kGPUGraphLengthPref value:length];
+}
+
+- (void)saveGpuColor:(NSColor *)color {
+    [self saveColorPref:kGPUColorPref value:color];
+}
+
+- (void)saveGpuTextColor:(NSColor *)color {
+    [self saveColorPref:kGPUTextColorPref value:color];
+}
+
+- (void)saveGpuANEColor:(NSColor *)color {
+    [self saveColorPref:kGPUANEColorPref value:color];
+}
+
+- (int)menuBarHorizontalPadding {
+    return [self loadIntPref:kMenuBarHorizontalPaddingPref
+                    lowBound:kMenuBarHorizontalPaddingMin
+                   highBound:kMenuBarHorizontalPaddingMax
+                defaultValue:kMenuBarHorizontalPaddingDefault];
+}
+
+- (void)saveMenuBarHorizontalPadding:(int)padding {
+    [self saveIntPref:kMenuBarHorizontalPaddingPref value:padding];
+}
+
+///////////////////////////////////////////////////////////////
+//
 //	Disk menu prefs
 //
 ///////////////////////////////////////////////////////////////
@@ -387,6 +461,10 @@
 	return [self loadBoolPref:kMemUsedFreeLabelPref defaultValue:kMemUsedFreeLabelDefault];
 } // memUsedFreeLabel
 
+- (BOOL)memDisplayGB {
+    return [self loadBoolPref:kMemDisplayGBPref defaultValue:kMemDisplayGBDefault];
+} // memDisplayGB
+
 - (BOOL)memPressure {
   return [self loadBoolPref:kMemPressurePref defaultValue:kMemPressureDefault];
 } // memUsedFreeLabel
@@ -441,6 +519,10 @@
 - (void)saveMemUsedFreeLabel:(BOOL)label {
 	[self saveBoolPref:kMemUsedFreeLabelPref value:label];
 } // saveMemUsedFreeLabel
+
+- (void)saveMemDisplayGB:(BOOL)displayGB {
+    [self saveBoolPref:kMemDisplayGBPref value:displayGB];
+} // saveMemDisplayGB
 
 - (void)saveMemPressure:(BOOL)label {
   [self saveBoolPref:kMemPressurePref value:label];

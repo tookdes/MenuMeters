@@ -18,7 +18,7 @@
 "IS4-Xc-psg.title" = "曲线";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "146"; */
-"146.title" = "OtherViews";
+"146.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "百分比"; ObjectID = "148"; */
 "Jeh-C2-Wwp.title" = "百分比";
@@ -27,22 +27,22 @@
 "149.title" = "曲线和百分比";
 
 /* Class = "NSMenuItem"; title = "ImageSet"; ObjectID = "203"; */
-"203.title" = "ImageSet";
+"203.title" = "图标样式";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "206"; */
-"206.title" = "OtherViews";
+"206.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "使用条状图"; ObjectID = "219"; */
 "219.title" = "使用条状图";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "223"; */
-"223.title" = "OtherViews";
+"223.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "使用饼图"; ObjectID = "225"; */
 "225.title" = "使用饼图";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "293"; */
-"293.title" = "OtherViews";
+"293.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "吞吐量"; ObjectID = "294"; */
 "294.title" = "吞吐量";
@@ -79,7 +79,7 @@
 "366.title" = "曲线、箭头和吞吐量";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "382"; */
-"382.title" = "OtherViews";
+"382.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "合计(大文字)"; ObjectID = "384"; */
 "384.title" = "合计(大文字)";
@@ -91,7 +91,7 @@
 "386.title" = "合计(中文字)";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "403"; */
-"403.title" = "OtherViews";
+"403.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "天地"; ObjectID = "404"; */
 "404.title" = "天地";
@@ -106,7 +106,7 @@
 "472.title" = "使用历史曲线";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "477"; */
-"477.title" = "OtherViews";
+"477.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "脉搏"; ObjectID = "478"; */
 "478.title" = "脉搏";
@@ -118,7 +118,7 @@
 "487.title" = "主要(自动)";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "489"; */
-"489.title" = "OtherViews";
+"489.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "反发光"; ObjectID = "497"; */
 "497.title" = "反发光";
@@ -133,13 +133,13 @@
 "502.title" = "卸下/推出宗卷";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "503"; */
-"503.title" = "OtherViews";
+"503.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "已使用/可用合计"; ObjectID = "508"; */
 "508.title" = "已使用/可用合计";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "522"; */
-"522.title" = "OtherViews";
+"522.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "接口速度"; ObjectID = "525"; */
 "525.title" = "接口速度";
@@ -151,7 +151,7 @@
 "541.title" = "线性";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "542"; */
-"542.title" = "OtherViews";
+"542.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "对数"; ObjectID = "545"; */
 "545.title" = "对数";
@@ -166,7 +166,7 @@
 "590.title" = "发送/接收";
 
 /* Class = "NSMenu"; title = "OtherViews"; ObjectID = "591"; */
-"591.title" = "OtherViews";
+"591.title" = "其他视图";
 
 /* Class = "NSMenuItem"; title = "接收/发送"; ObjectID = "592"; */
 "592.title" = "接收/发送";
@@ -337,4 +337,91 @@
 "1078.title" = "MenuMeters, © 2002-2014 Alex Harper (http://www.ragingmenace.com)";
 
 /* Class = "NSTextFieldCell"; title = "Compressed"; ObjectID = "1081"; */
-"1081.title" = "Compressed";
+"1081.title" = "已压缩";
+
+/* Class = "NSTextFieldCell"; title = "Horizontal Rows:"; ObjectID = "1088"; */
+"1088.title" = "水平行数：";
+
+/* Class = "NSTextFieldCell"; title = "Horizontal Thermometer Display"; ObjectID = "1094"; */
+"1094.title" = "水平温度计显示";
+
+/* Class = "NSTextFieldCell"; title = "Horizontal Width:"; ObjectID = "1117"; */
+"1117.title" = "水平宽度：";
+
+/* Class = "NSMenuItem"; title = "the sum of all cores"; ObjectID = "5Lg-aP-TSR"; */
+"5Lg-aP-TSR.title" = "所有核心合计";
+
+/* Class = "NSButtonCell"; title = "Show CPU Temperature in"; ObjectID = "5r7-xY-4OH"; */
+"5r7-xY-4OH.title" = "显示 CPU 温度，单位";
+
+/* Class = "NSMenuItem"; title = "the average of all cores"; ObjectID = "BYT-hf-ygS"; */
+"BYT-hf-ygS.title" = "所有核心平均值";
+
+/* Class = "NSTextFieldCell"; title = "Sensor:"; ObjectID = "Bgr-O5-qr1"; */
+"Bgr-O5-qr1.title" = "传感器：";
+
+/* Class = "NSTextFieldCell"; title = "Temperature"; ObjectID = "C4n-F2-kuL"; */
+"C4n-F2-kuL.title" = "温度";
+
+/* Class = "NSTextFieldCell"; title = "Activity monitor:"; ObjectID = "CDM-3t-gon"; */
+"CDM-3t-gon.title" = "活动监视器：";
+
+/* Class = "NSMenuItem"; title = "all cores sorted"; ObjectID = "CG1-40-AVC"; */
+"CG1-40-AVC.title" = "全部核心（按使用率排序）";
+
+/* Class = "NSTextFieldCell"; title = "original"; ObjectID = "FPO-Jo-ubG"; */
+"FPO-Jo-ubG.title" = "原始颜色";
+
+/* Class = "NSTabViewItem"; label = "About"; ObjectID = "FSw-QC-dn2"; */
+"FSw-QC-dn2.label" = "关于";
+
+/* Class = "NSMenuItem"; title = "physical cores only"; ObjectID = "H5f-hN-vQV"; */
+"H5f-hN-vQV.title" = "仅物理核心";
+
+/* Class = "NSButtonCell"; title = "Show bits per second"; ObjectID = "K7W-5f-1U8"; */
+"K7W-5f-1U8.title" = "以 bit/s 显示";
+
+/* Class = "NSMenuItem"; title = "Once per week"; ObjectID = "LmO-Ij-G7M"; */
+"LmO-Ij-G7M.title" = "每周一次";
+
+/* Class = "NSMenuItem"; title = "Once per month"; ObjectID = "PuG-eZ-jRm"; */
+"PuG-eZ-jRm.title" = "每月一次";
+
+/* Class = "NSMenuItem"; title = "Never"; ObjectID = "STJ-3R-khe"; */
+"STJ-3R-khe.title" = "从不";
+
+/* Class = "NSButtonCell"; title = "Check updates now"; ObjectID = "XYi-uP-QCD"; */
+"XYi-uP-QCD.title" = "立即检查更新";
+
+/* Class = "NSButtonCell"; title = "Display memory pressure"; ObjectID = "aOw-Lj-aWS"; */
+"aOw-Lj-aWS.title" = "显示内存压力";
+
+/* Class = "NSTextFieldCell"; title = "pure black/white"; ObjectID = "ayz-p2-XC5"; */
+"ayz-p2-XC5.title" = "纯黑/白";
+
+/* Class = "NSTextFieldCell"; title = "Compressed"; ObjectID = "ex0-hf-q5R"; */
+"ex0-hf-q5R.title" = "已压缩";
+
+/* Class = "NSTextFieldCell"; title = "Show:"; ObjectID = "k2d-Cg-pqL"; */
+"k2d-Cg-pqL.title" = "显示：";
+
+/* Class = "NSMenuItem"; title = "Once per day"; ObjectID = "lh5-j8-SRe"; */
+"lh5-j8-SRe.title" = "每天一次";
+
+/* Class = "NSTextFieldCell"; title = "Color tint:"; ObjectID = "mAZ-f2-5AJ"; */
+"mAZ-f2-5AJ.title" = "颜色色调：";
+
+/* Class = "NSTextFieldCell"; title = "Process Display"; ObjectID = "p2Z-13-y3b"; */
+"p2Z-13-y3b.title" = "进程显示";
+
+/* Class = "NSButtonCell"; title = "Opens specific panes"; ObjectID = "phH-yJ-I6O"; */
+"phH-yJ-I6O.title" = "打开对应面板";
+
+/* Class = "NSTextFieldCell"; title = "Processes to show:"; ObjectID = "rhi-NX-C3L"; */
+"rhi-NX-C3L.title" = "显示进程数：";
+
+/* Class = "NSTextFieldCell"; title = "Automatic update check interval:"; ObjectID = "tug-YR-k7T"; */
+"tug-YR-k7T.title" = "自动检查更新间隔：";
+
+/* Class = "NSMenuItem"; title = "all cores, including hyperthreaded ones"; ObjectID = "vbH-jV-tUr"; */
+"vbH-jV-tUr.title" = "全部核心（含超线程）";

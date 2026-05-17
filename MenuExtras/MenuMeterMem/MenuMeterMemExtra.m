@@ -34,6 +34,9 @@
 
 // Menu generation
 - (void)updateMenuContent;
+- (void)toggleMemoryTextUnit:(id)sender;
+- (NSString *)memoryDisplayStringForMB:(double)megabytes;
+- (CGFloat)memoryDisplayTextWidth;
 
 // Timer callbacks
 - (void)updateMenuWhenDown;
@@ -73,6 +76,8 @@
 #define kSwapSizeFormat						@"%@ total swap space"
 #define kSwapSizeUsedFormat					@"%@ total swap space (%@ used)"
 #define kMBLabel							@"MB"
+#define kGBLabel                            @"GB"
+#define kMemDisplayGBMenuTitle              @"Show Memory Text in GB"
 
 ///////////////////////////////////////////////////////////////
 //
@@ -178,6 +183,11 @@
     menuItem.indentationLevel=1;
 	[menuItem setEnabled:NO];
     [extraMenu addItem:[NSMenuItem separatorItem]];
+    memDisplayGBMenuItem = [extraMenu addItemWithTitle:[localizedStrings objectForKey:kMemDisplayGBMenuTitle]
+                                                action:@selector(toggleMemoryTextUnit:)
+                                         keyEquivalent:@""];
+    [memDisplayGBMenuItem setTarget:self];
+    [extraMenu addItem:[NSMenuItem separatorItem]];
     [self addStandardMenuEntriesTo:extraMenu];
 
 
@@ -276,6 +286,7 @@
 	}
 
 	// Update the menu content
+    [memDisplayGBMenuItem setState:[ourPrefs memDisplayGB] ? NSOnState : NSOffState];
 	[self updateMenuContent];
 
 	// Send the menu back to SystemUIServer
@@ -487,18 +498,14 @@
 
 	// Construct strings
 	NSAttributedString *renderUString = [[NSAttributedString alloc]
-													initWithString:[NSString stringWithFormat:@"%.0f%@",
-																		usedMB,
-																		[localizedStrings objectForKey:kMBLabel]]
+													initWithString:[self memoryDisplayStringForMB:usedMB]
 														attributes:[NSDictionary dictionaryWithObjectsAndKeys:
                                                                     [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular], NSFontAttributeName,
 																		usedColor, NSForegroundColorAttributeName,
 																		nil]];
 	// Construct and draw the free string
 	NSAttributedString *renderFString = [[NSAttributedString alloc]
-													initWithString:[NSString stringWithFormat:@"%.0f%@",
-																		freeMB,
-																		[localizedStrings objectForKey:kMBLabel]]
+													initWithString:[self memoryDisplayStringForMB:freeMB]
 														attributes:[NSDictionary dictionaryWithObjectsAndKeys:
                                                                     [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular], NSFontAttributeName,
 																		freeColor, NSForegroundColorAttributeName,
@@ -517,6 +524,35 @@
 
 
 } // renderNumbersIntoImage
+
+- (void)toggleMemoryTextUnit:(id)sender
+{
+    [ourPrefs saveMemDisplayGB:![ourPrefs memDisplayGB]];
+    if ([sender respondsToSelector:@selector(setState:)]) {
+        [sender setState:[ourPrefs memDisplayGB] ? NSOnState : NSOffState];
+    }
+    [self configFromPrefs:nil];
+}
+
+- (NSString *)memoryDisplayStringForMB:(double)megabytes
+{
+    if ([ourPrefs memDisplayGB]) {
+        return [NSString stringWithFormat:@"%.1f%@", megabytes / 1024.0, [localizedStrings objectForKey:kGBLabel]];
+    }
+    return [NSString stringWithFormat:@"%.0f%@", megabytes, [localizedStrings objectForKey:kMBLabel]];
+}
+
+- (CGFloat)memoryDisplayTextWidth
+{
+    NSDictionary *currentStats = [memStats memStats];
+    double totalMB = [[currentStats objectForKey:@"totalmb"] doubleValue];
+    NSAttributedString *sample = [[NSAttributedString alloc]
+                                  initWithString:[self memoryDisplayStringForMB:totalMB]
+                                  attributes:[NSDictionary dictionaryWithObjectsAndKeys:
+                                              [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular], NSFontAttributeName,
+                                              nil]];
+    return (CGFloat)ceil([sample size].width) + 1.0f;
+}
 
 - (void)renderPressureBar {
   // Load current stats
@@ -816,6 +852,7 @@
 	}
 
 	// Update the menu content
+    [memDisplayGBMenuItem setState:[ourPrefs memDisplayGB] ? NSOnState : NSOffState];
 	[self updateMenuContent];
 
 	// Force the menu to redraw
@@ -873,16 +910,6 @@
 #endif
 
     [self setupColor:nil];
-	// Figure out the length of "MB" localization
-	float mbLength = 0;
-	if ([ourPrefs memDisplayMode] == kMemDisplayNumber) {
-		NSAttributedString *renderMBString =  [[NSAttributedString alloc]
-													initWithString:[localizedStrings objectForKey:kMBLabel]
-														attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-                                                                    [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular], NSFontAttributeName,
-																		nil]];
-		mbLength = (float)ceil([renderMBString size].width);
-	}
 
 	// Fix our menu size to match our config
     CGFloat uWidth=self.uLabel.size.width;
@@ -890,26 +917,18 @@
     numberLabelWidth=(uWidth>fWidth)?uWidth:fWidth;
 	menuWidth = 0;
 	switch ([ourPrefs memDisplayMode]) {
-		case kMemDisplayPie:
-			menuWidth = kMemPieDisplayWidth;
-			break;
-		case kMemDisplayNumber:
-			// Read in the total RAM, and change length to accomodate those with more RAM
-			if ([[[memStats memStats] objectForKey:@"totalmb"] unsignedLongLongValue] >= 10000) {
-				menuWidth = kMemNumberDisplayExtraLongWidth + mbLength;
-				textWidth = kMemNumberDisplayExtraLongWidth + mbLength;
-			} else if ([[[memStats memStats] objectForKey:@"totalmb"] unsignedLongLongValue] >= 1000) {
-				menuWidth = kMemNumberDisplayLongWidth + mbLength;
-				textWidth = kMemNumberDisplayLongWidth + mbLength;
-			} else {
-				menuWidth = kMemNumberDisplayShortWidth + mbLength;
-				textWidth = kMemNumberDisplayShortWidth + mbLength;
-			}
-			if ([ourPrefs memUsedFreeLabel]) {
-				menuWidth += ceil(numberLabelWidth);
-				textWidth += ceil(numberLabelWidth);
-			}
-			break;
+			case kMemDisplayPie:
+				menuWidth = kMemPieDisplayWidth;
+				break;
+			case kMemDisplayNumber:
+				// Read in the total RAM, and change length to accomodate those with more RAM
+				menuWidth = [self memoryDisplayTextWidth];
+				textWidth = menuWidth;
+				if ([ourPrefs memUsedFreeLabel]) {
+					menuWidth += ceil(numberLabelWidth);
+					textWidth += ceil(numberLabelWidth);
+				}
+				break;
 		case kMemDisplayBar:
 			menuWidth = kMemThermometerDisplayWidth;
 			break;
@@ -924,7 +943,7 @@
 
 
 	// Force initial update
-    statusItem.button.image=self.image;
+    [self updateStatusItemImage];
 } // configFromPrefs
 
 @end

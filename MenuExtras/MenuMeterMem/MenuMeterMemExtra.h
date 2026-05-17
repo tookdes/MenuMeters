@@ -47,10 +47,11 @@
 	NSColor							*freeColor, *usedColor,
 									*activeColor, *inactiveColor, *wireColor, *compressedColor,
 									*pageInColor, *pageOutColor;
-	// Image cache for numbers label
+		// Image cache for numbers label
 	CGFloat							numberLabelWidth;
-	// Width of the text display
+		// Width of the text display
 	float							textWidth;
+    NSMenuItem                      *memDisplayGBMenuItem;
 	// History data
 	NSMutableArray					*memHistory;
 	NSDictionary					*currentSwapStats;

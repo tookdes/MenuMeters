@@ -1,4 +1,20 @@
 "Open MenuMeters preferences" = "Open MenuMeters preferences";
+"Launch at Login" = "Launch at Login";
+"Quit MenuMeters" = "Quit MenuMeters";
+"Show Memory Text in GB" = "Show Memory Text in GB";
+"Display GPU Menu Meter" = "Display GPU Menu Meter";
+"GPU Display" = "GPU Display";
+"Percentage" = "Percentage";
+"Graph" = "Graph";
+"GPU Frequency" = "GPU Frequency";
+"GPU Power" = "GPU Power";
+"ANE Power" = "ANE Power";
+"Timing and Width" = "Timing and Width";
+"Update interval (seconds):" = "Update interval (seconds):";
+"Graph width:" = "Graph width:";
+"Menu bar horizontal padding:" = "Menu bar horizontal padding:";
+"Colors" = "Colors";
+"Text" = "Text";
 //	In the interest of improving localizability most strings in MenuMeters
 //	are exposed as NSString format strings, including the %1$, %2$ parameter placement
 //	convention. If localization requires different ordering of the parameters you
@@ -50,6 +66,16 @@
 // CPU power limit status
 "CPU power limit:" = "CPU power limit:";
 "speed %@%%, scheduler %@%%" = "speed %@%%, scheduler %@%%";
+
+// Top CPU processes title
+"Top CPU Intensive Processes:" = "Top CPU Intensive Processes:";
+
+// GPU menu titles
+"GPU:" = "GPU:";
+"GPU Usage:" = "GPU Usage:";
+"GPU Frequency:" = "GPU Frequency:";
+"GPU Power:" = "GPU Power:";
+"ANE Power:" = "ANE Power:";
 
 // Open Process Viewer/Open Console
 "Open Process Viewer" = "Open Process Viewer";
@@ -208,6 +234,7 @@
 "Copy IPv6 address" = "Copy IPv6 address";
 "Connect" = "Connect";
 "Disconnect" = "Disconnect";
+"Reset traffic totals" = "Reset traffic totals";
 
 // Miscellaneous error strings
 "No Active Interfaces" = "No Active Interfaces";

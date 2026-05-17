@@ -492,7 +492,7 @@
         }
     }
 	// Force initial update
-    statusItem.button.image=self.image;
+    [self updateStatusItemImage];
 } // configFromPrefs
 
 @end

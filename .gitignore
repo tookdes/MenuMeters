@@ -16,3 +16,11 @@ prenotarized_zip/
 staple-and-upload
 upload
 upload-old
+
+# Local build and release artifacts
+/MenuMeters.app/
+/MenuMeters-Release.zip
+*.dSYM/
+*.xcarchive/
+*.xcresult/
+/DerivedData/

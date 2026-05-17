@@ -784,7 +784,7 @@
 
     
 	// Force initial update
-    statusItem.button.image=self.image;
+    [self updateStatusItemImage];
 } // configFromPrefs
 
 - (void)getCPULoadForCPU:(uint32_t)processor

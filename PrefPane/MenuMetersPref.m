@@ -25,6 +25,7 @@
 #import "EMCLoginItem.h"
 #import "MenuMeterCPUExtra.h"
 #import "MenuMeterDiskExtra.h"
+#import "MenuMeterGPUExtra.h"
 #import "MenuMeterMemExtra.h"
 #import "MenuMeterNetExtra.h"
 #import "TemperatureReader.h"
@@ -50,6 +51,12 @@
 
 // CPU info
 - (BOOL)isMultiProcessor;
+
+// GPU pane
+- (void)setupGPUPaneWithFormatter:(NSNumberFormatter *)intervalFormatter;
+- (void)setupCPUPageHardwareControls;
+- (void)notifyAllMenuExtrasOfLayoutChange;
+- (NSString *)toolbarImageNameForItemIdentifier:(NSString *)identifier;
 
 // System config framework
 - (void)connectSystemConfig;
@@ -101,6 +108,22 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 #ifdef SPARKLE
     SUUpdater*updater;
 #endif
+    NSButton *gpuMeterToggle;
+    NSButton *gpuPercentageToggle;
+    NSButton *gpuGraphToggle;
+    NSButton *gpuFrequencyToggle;
+    NSButton *gpuPowerToggle;
+    NSButton *gpuANEPowerToggle;
+    NSButton *cpuPaneANEPowerToggle;
+    NSSlider *gpuInterval;
+    NSTextField *gpuIntervalDisplay;
+    NSSlider *gpuGraphWidth;
+    NSTextField *gpuGraphWidthLabel;
+    NSSlider *menuBarPadding;
+    NSTextField *menuBarPaddingLabel;
+    NSColorWell *gpuColor;
+    NSColorWell *gpuTextColor;
+    NSColorWell *gpuANEColor;
 }
 -(IBAction)showAlertConcerningSystemEventsEtc:(id)sender
 {
@@ -115,7 +138,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 }
 -(IBAction)openAbout:(id)sender
 {
-    [prefTabs selectTabViewItemAtIndex:4];
+    [prefTabs selectTabViewItemWithIdentifier:@"info.circle"];
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp activateIgnoringOtherApps:YES];
     [self.window makeKeyAndOrderFront:self];
@@ -124,16 +147,19 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 {
     id obj=notification.object;
     if([obj isKindOfClass:[MenuMeterCPUExtra class]]){
-        [prefTabs selectTabViewItemAtIndex:0];
+        [prefTabs selectTabViewItemWithIdentifier:@"cpu"];
+    }
+    if([obj isKindOfClass:[MenuMeterGPUExtra class]]){
+        [prefTabs selectTabViewItemWithIdentifier:@"gpu"];
     }
     if([obj isKindOfClass:[MenuMeterDiskExtra class]]){
-        [prefTabs selectTabViewItemAtIndex:1];
+        [prefTabs selectTabViewItemWithIdentifier:@"internaldrive"];
     }
     if([obj isKindOfClass:[MenuMeterMemExtra class]]){
-        [prefTabs selectTabViewItemAtIndex:2];
+        [prefTabs selectTabViewItemWithIdentifier:@"memorychip"];
     }
     if([obj isKindOfClass:[MenuMeterNetExtra class]]){
-        [prefTabs selectTabViewItemAtIndex:3];
+        [prefTabs selectTabViewItemWithIdentifier:@"network"];
     }
     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
     [NSApp activateIgnoringOtherApps:YES];
@@ -142,6 +168,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 -(BOOL)noMenuMeterLoaded
 {
     return ![self isExtraWithBundleIDLoaded:kCPUMenuBundleID] &&
+    ![self isExtraWithBundleIDLoaded:kGPUMenuBundleID] &&
     ![self isExtraWithBundleIDLoaded:kDiskMenuBundleID] &&
     ![self isExtraWithBundleIDLoaded:kMemMenuBundleID] &&
     ![self isExtraWithBundleIDLoaded:kNetMenuBundleID];
@@ -204,13 +231,22 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	NSTabViewItem *tabItem = [prefTabs tabViewItemAtIndex:tabIdx];
 	item.paletteLabel = tabItem.label;
 	item.label = tabItem.label;
+	item.target = self;
 	item.action = @selector(toolbarSelection:);
 #if (__MAC_OS_X_VERSION_MAX_ALLOWED >= 101600)
 	if (@available(macOS 10.16, *)) {
-		item.image = [NSImage imageWithSystemSymbolName:itemIdent accessibilityDescription:@""];
+		item.image = [NSImage imageWithSystemSymbolName:[self toolbarImageNameForItemIdentifier:itemIdent] accessibilityDescription:@""];
 	}
 #endif
 	return item;
+}
+
+- (NSString *)toolbarImageNameForItemIdentifier:(NSString *)identifier
+{
+	if ([identifier isEqualToString:@"gpu"]) {
+		return @"rectangle.3.group";
+	}
+	return identifier;
 }
 
 - (IBAction)toolbarSelection:(id)sender {
@@ -372,34 +408,215 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	[cpuIntervalDisplay setFormatter:intervalFormatter];
 	[diskIntervalDisplay setFormatter:intervalFormatter];
 	[netIntervalDisplay setFormatter:intervalFormatter];
+    [self setupGPUPaneWithFormatter:intervalFormatter];
+    [self setupCPUPageHardwareControls];
 
 	// The scale menu used to have images but they have been long gone
     // when the app is moved outside of System Preferences
     // because I forgot to include the image files in the new target.
     // Now they are eliminated from the code too ...
     
-    {
-    NSString*oldAppPath=[@"~/Library/PreferencePanes/MenuMeters.prefPane/Contents/Resources/MenuMetersApp.app" stringByExpandingTildeInPath];
-        EMCLoginItem*oldItem=[EMCLoginItem loginItemWithPath:oldAppPath];
-        if(oldItem.isLoginItem){
-            [oldItem removeLoginItem];
-        }
-    }
-    {
-        NSString*oldAppPath=@"/Library/PreferencePanes/MenuMeters.prefPane/Contents/Resources/MenuMetersApp.app";
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    if (![defaults boolForKey:kMenuMetersLoginItemsMigratedPref]) {
+        [defaults setBool:YES forKey:kMenuMetersLoginItemsMigratedPref];
+        {
+            NSString*oldAppPath=[@"~/Library/PreferencePanes/MenuMeters.prefPane/Contents/Resources/MenuMetersApp.app" stringByExpandingTildeInPath];
             EMCLoginItem*oldItem=[EMCLoginItem loginItemWithPath:oldAppPath];
             if(oldItem.isLoginItem){
                 [oldItem removeLoginItem];
             }
+        }
+        {
+            NSString*oldAppPath=@"/Library/PreferencePanes/MenuMeters.prefPane/Contents/Resources/MenuMetersApp.app";
+            EMCLoginItem*oldItem=[EMCLoginItem loginItemWithPath:oldAppPath];
+            if(oldItem.isLoginItem){
+                [oldItem removeLoginItem];
+            }
+        }
+        system("killall MenuMetersApp");
+        {
+            EMCLoginItem*thisItem=[EMCLoginItem loginItemWithBundle:[NSBundle mainBundle]];
+            if(!thisItem.isLoginItem){
+                [thisItem addLoginItem];
+            }
+        }
+	}
+	} // mainViewDidLoad
+
+- (NSString *)localizedPreferenceString:(NSString *)key
+{
+    return [[NSBundle mainBundle] localizedStringForKey:key value:key table:nil];
+}
+
+- (NSTextField *)labelWithTitle:(NSString *)title frame:(NSRect)frame
+{
+    NSTextField *label = [[NSTextField alloc] initWithFrame:frame];
+    label.stringValue = title;
+    label.editable = NO;
+    label.selectable = NO;
+    label.bezeled = NO;
+    label.drawsBackground = NO;
+    label.textColor = [NSColor controlTextColor];
+    label.font = [NSFont systemFontOfSize:[NSFont systemFontSize]];
+    return label;
+}
+
+- (NSButton *)checkboxWithTitle:(NSString *)title frame:(NSRect)frame action:(SEL)action
+{
+    NSButton *button = [[NSButton alloc] initWithFrame:frame];
+    button.buttonType = NSSwitchButton;
+    button.title = title;
+    button.target = self;
+    button.action = action;
+    return button;
+}
+
+- (NSSlider *)sliderWithFrame:(NSRect)frame min:(double)min max:(double)max ticks:(NSInteger)ticks action:(SEL)action
+{
+    NSSlider *slider = [[NSSlider alloc] initWithFrame:frame];
+    slider.minValue = min;
+    slider.maxValue = max;
+    slider.numberOfTickMarks = ticks;
+    slider.allowsTickMarkValuesOnly = YES;
+    slider.continuous = YES;
+    slider.target = self;
+    slider.action = action;
+    return slider;
+}
+
+- (NSColorWell *)colorWellWithFrame:(NSRect)frame action:(SEL)action
+{
+    NSColorWell *well = [[NSColorWell alloc] initWithFrame:frame];
+    well.target = self;
+    well.action = action;
+    return well;
+}
+
+- (void)addSectionTitle:(NSString *)title toView:(NSView *)view y:(CGFloat)y
+{
+    [view addSubview:[self labelWithTitle:title frame:NSMakeRect(18, y, 180, 18)]];
+    NSBox *line = [[NSBox alloc] initWithFrame:NSMakeRect(155, y + 5, 375, 5)];
+    line.boxType = NSBoxSeparator;
+    [view addSubview:line];
+}
+
+- (void)setupGPUPaneWithFormatter:(NSNumberFormatter *)intervalFormatter
+{
+    if ([prefTabs tabViewItemAtIndex:MIN(1, prefTabs.numberOfTabViewItems - 1)].identifier &&
+        [prefTabs indexOfTabViewItemWithIdentifier:@"gpu"] != NSNotFound) {
+        return;
     }
-    system("killall MenuMetersApp");
-    {
-        EMCLoginItem*thisItem=[EMCLoginItem loginItemWithBundle:[NSBundle mainBundle]];
-        if(!thisItem.isLoginItem){
-            [thisItem addLoginItem];
+
+    NSView *view = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 548, 606)];
+    view.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    NSTabViewItem *gpuTab = [[NSTabViewItem alloc] initWithIdentifier:@"gpu"];
+    gpuTab.label = @"GPU";
+    gpuTab.view = view;
+    [prefTabs insertTabViewItem:gpuTab atIndex:1];
+
+    gpuMeterToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"Display GPU Menu Meter"]
+                                       frame:NSMakeRect(19, 571, 240, 24)
+                                      action:@selector(gpuPrefChange:)];
+    [view addSubview:gpuMeterToggle];
+
+    [self addSectionTitle:[self localizedPreferenceString:@"GPU Display"] toView:view y:525];
+    gpuPercentageToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"Percentage"]
+                                            frame:NSMakeRect(50, 490, 150, 22)
+                                           action:@selector(gpuPrefChange:)];
+    gpuGraphToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"Graph"]
+                                       frame:NSMakeRect(50, 462, 150, 22)
+                                      action:@selector(gpuPrefChange:)];
+    gpuFrequencyToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"GPU Frequency"]
+                                           frame:NSMakeRect(290, 490, 210, 22)
+                                          action:@selector(gpuPrefChange:)];
+    gpuPowerToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"GPU Power"]
+                                       frame:NSMakeRect(290, 462, 210, 22)
+                                      action:@selector(gpuPrefChange:)];
+    [view addSubview:gpuPercentageToggle];
+    [view addSubview:gpuGraphToggle];
+    [view addSubview:gpuFrequencyToggle];
+    [view addSubview:gpuPowerToggle];
+
+    [self addSectionTitle:[self localizedPreferenceString:@"Timing and Width"] toView:view y:380];
+    [view addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Update interval (seconds):"]
+                                    frame:NSMakeRect(50, 346, 185, 18)]];
+    gpuIntervalDisplay = [self labelWithTitle:@"x" frame:NSMakeRect(220, 346, 54, 18)];
+    gpuIntervalDisplay.alignment = NSTextAlignmentCenter;
+    gpuIntervalDisplay.formatter = intervalFormatter;
+    [view addSubview:gpuIntervalDisplay];
+    gpuInterval = [self sliderWithFrame:NSMakeRect(285, 339, 245, 24)
+                                    min:kGPUUpdateIntervalMin
+                                    max:kGPUUpdateIntervalMax
+                                  ticks:20
+                                 action:@selector(liveUpdateInterval:)];
+    [view addSubview:gpuInterval];
+
+    [view addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Graph width:"]
+                                    frame:NSMakeRect(50, 310, 160, 18)]];
+    gpuGraphWidthLabel = [self labelWithTitle:@"" frame:NSMakeRect(220, 310, 54, 18)];
+    gpuGraphWidthLabel.alignment = NSTextAlignmentCenter;
+    [view addSubview:gpuGraphWidthLabel];
+    gpuGraphWidth = [self sliderWithFrame:NSMakeRect(285, 303, 245, 24)
+                                      min:kGPUGraphWidthMin
+                                      max:kGPUGraphWidthMax
+                                    ticks:8
+                                   action:@selector(gpuPrefChange:)];
+    [view addSubview:gpuGraphWidth];
+
+    [view addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Menu bar horizontal padding:"]
+                                    frame:NSMakeRect(50, 274, 210, 18)]];
+    menuBarPaddingLabel = [self labelWithTitle:@"" frame:NSMakeRect(250, 274, 35, 18)];
+    menuBarPaddingLabel.alignment = NSTextAlignmentCenter;
+    [view addSubview:menuBarPaddingLabel];
+    menuBarPadding = [self sliderWithFrame:NSMakeRect(285, 267, 245, 24)
+                                       min:kMenuBarHorizontalPaddingMin
+                                       max:kMenuBarHorizontalPaddingMax
+                                     ticks:kMenuBarHorizontalPaddingMax + 1
+                                    action:@selector(gpuPrefChange:)];
+    [view addSubview:menuBarPadding];
+
+    [self addSectionTitle:[self localizedPreferenceString:@"Colors"] toView:view y:210];
+    [view addSubview:[self labelWithTitle:@"GPU" frame:NSMakeRect(70, 170, 85, 18)]];
+    gpuColor = [self colorWellWithFrame:NSMakeRect(70, 132, 53, 30) action:@selector(gpuPrefChange:)];
+    [view addSubview:gpuColor];
+    [view addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Text"] frame:NSMakeRect(210, 170, 85, 18)]];
+    gpuTextColor = [self colorWellWithFrame:NSMakeRect(210, 132, 53, 30) action:@selector(gpuPrefChange:)];
+    [view addSubview:gpuTextColor];
+    [view addSubview:[self labelWithTitle:@"ANE" frame:NSMakeRect(350, 170, 85, 18)]];
+    gpuANEColor = [self colorWellWithFrame:NSMakeRect(350, 132, 53, 30) action:@selector(gpuPrefChange:)];
+    [view addSubview:gpuANEColor];
+}
+
+- (void)setupCPUPageHardwareControls
+{
+    NSView *cpuView = cpuMeterToggle.superview;
+    if (!cpuView) {
+        return;
+    }
+
+    cpuTemperatureToggle.frame = NSMakeRect(19, 540, 185, 22);
+    cpuTemperatureUnit.frame = NSMakeRect(205, 534, 68, 26);
+    cpuTemperatureSensor.frame = NSMakeRect(112, 505, 161, 26);
+    cpuPercentage.frame = NSMakeRect(305, 571, 95, 22);
+    cpuGraph.frame = NSMakeRect(305, 546, 95, 22);
+    cpuThermometer.frame = NSMakeRect(412, 571, 125, 22);
+    cpuHorizontalThermometer.frame = NSMakeRect(412, 546, 125, 22);
+
+    for (NSView *subview in cpuView.subviews) {
+        if ([subview isKindOfClass:[NSTextField class]]) {
+            NSTextField *field = (NSTextField *)subview;
+            if (fabs(field.frame.origin.y - 489.0) < 8.0 && field.frame.origin.x > 240.0) {
+                field.frame = NSMakeRect(42, 510, 72, 18);
+                break;
+            }
         }
     }
-} // mainViewDidLoad
+
+    cpuPaneANEPowerToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"ANE Power"]
+                                              frame:NSMakeRect(412, 521, 125, 22)
+                                             action:@selector(gpuPrefChange:)];
+    [cpuView addSubview:cpuPaneANEPowerToggle];
+}
 
 - (void)updateTemperatureSensors
 {
@@ -446,6 +663,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 
 	// Set the switches on each menu toggle
 	[cpuMeterToggle setState:([self isExtraWithBundleIDLoaded:kCPUMenuBundleID] ? NSOnState : NSOffState)];
+    [gpuMeterToggle setState:([self isExtraWithBundleIDLoaded:kGPUMenuBundleID] ? NSOnState : NSOffState)];
 	[diskMeterToggle setState:([self isExtraWithBundleIDLoaded:kDiskMenuBundleID] ? NSOnState : NSOffState)];
 	[memMeterToggle setState:([self isExtraWithBundleIDLoaded:kMemMenuBundleID] ? NSOnState : NSOffState)];
 	[netMeterToggle setState:([self isExtraWithBundleIDLoaded:kNetMenuBundleID] ? NSOnState : NSOffState)];
@@ -495,6 +713,8 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	if (bundleID) {
 		if ([bundleID isEqualToString:kCPUMenuBundleID]) {
 			[cpuMeterToggle setState:NSOffState];
+        } else if ([bundleID isEqualToString:kGPUMenuBundleID]) {
+            [gpuMeterToggle setState:NSOffState];
 		} else if ([bundleID isEqualToString:kDiskMenuBundleID]) {
 			[diskMeterToggle setState:NSOffState];
 		} else if ([bundleID isEqualToString:kMemMenuBundleID]) {
@@ -510,6 +730,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 
 	if (ourPrefs) {
 		[self cpuPrefChange:nil];
+        [self gpuPrefChange:nil];
 		[self diskPrefChange:nil];
 		[self memPrefChange:nil];
 		[self netPrefChange:nil];
@@ -536,6 +757,14 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 				   withObject:cpuInterval
 				   afterDelay:0.0];
 		[cpuIntervalDisplay takeDoubleValueFrom:cpuInterval];
+    } else if (sender == gpuInterval) {
+        [NSObject cancelPreviousPerformRequestsWithTarget:self
+                                                 selector:@selector(gpuPrefChange:)
+                                                   object:gpuInterval];
+        [self performSelector:@selector(gpuPrefChange:)
+                   withObject:gpuInterval
+                   afterDelay:0.0];
+        [gpuIntervalDisplay takeDoubleValueFrom:gpuInterval];
 	} else if (sender == diskInterval) {
 		[NSObject cancelPreviousPerformRequestsWithTarget:self
 												 selector:@selector(diskPrefChange:)
@@ -766,6 +995,107 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	}
 
 } // cpuPrefChange
+
+- (int)gpuDisplayMode
+{
+    int mode = 0;
+    if ([gpuPercentageToggle state] == NSOnState) {
+        mode |= kGPUDisplayPercent;
+    }
+    if ([gpuGraphToggle state] == NSOnState) {
+        mode |= kGPUDisplayGraph;
+    }
+    if ([gpuFrequencyToggle state] == NSOnState) {
+        mode |= kGPUDisplayFrequency;
+    }
+    if ([gpuPowerToggle state] == NSOnState) {
+        mode |= kGPUDisplayPower;
+    }
+    if ([cpuPaneANEPowerToggle state] == NSOnState) {
+        mode |= kGPUDisplayANEPower;
+    }
+    if (mode == 0) {
+        mode = kGPUDisplayPercent;
+    }
+    return mode;
+}
+
+- (IBAction)gpuPrefChange:(id)sender
+{
+    if (!gpuMeterToggle) {
+        return;
+    }
+
+    if (([gpuMeterToggle state] == NSOnState) && ![self isExtraWithBundleIDLoaded:kGPUMenuBundleID]) {
+        [self loadExtraAtURL:nil withID:kGPUMenuBundleID];
+    } else if (([gpuMeterToggle state] == NSOffState) && [self isExtraWithBundleIDLoaded:kGPUMenuBundleID]) {
+        [self removeExtraWithBundleID:kGPUMenuBundleID];
+    }
+    [gpuMeterToggle setState:([self isExtraWithBundleIDLoaded:kGPUMenuBundleID] ? NSOnState : NSOffState)];
+
+    BOOL layoutChanged = NO;
+    if (sender == gpuPercentageToggle ||
+        sender == gpuGraphToggle ||
+        sender == gpuFrequencyToggle ||
+        sender == gpuPowerToggle ||
+        sender == cpuPaneANEPowerToggle) {
+        [ourPrefs saveGpuDisplayMode:[self gpuDisplayMode]];
+    } else if (sender == gpuInterval) {
+        [ourPrefs saveGpuInterval:[gpuInterval doubleValue]];
+    } else if (sender == gpuGraphWidth) {
+        [ourPrefs saveGpuGraphLength:[gpuGraphWidth intValue]];
+    } else if (sender == gpuColor) {
+        [ourPrefs saveGpuColor:[gpuColor color]];
+    } else if (sender == gpuTextColor) {
+        [ourPrefs saveGpuTextColor:[gpuTextColor color]];
+    } else if (sender == gpuANEColor) {
+        [ourPrefs saveGpuANEColor:[gpuANEColor color]];
+    } else if (sender == menuBarPadding) {
+        [ourPrefs saveMenuBarHorizontalPadding:[menuBarPadding intValue]];
+        layoutChanged = YES;
+    }
+
+    int mode = [ourPrefs gpuDisplayMode];
+    [gpuPercentageToggle setState:(mode & kGPUDisplayPercent) ? NSOnState : NSOffState];
+    [gpuGraphToggle setState:(mode & kGPUDisplayGraph) ? NSOnState : NSOffState];
+    [gpuFrequencyToggle setState:(mode & kGPUDisplayFrequency) ? NSOnState : NSOffState];
+    [gpuPowerToggle setState:(mode & kGPUDisplayPower) ? NSOnState : NSOffState];
+    [cpuPaneANEPowerToggle setState:(mode & kGPUDisplayANEPower) ? NSOnState : NSOffState];
+
+    [gpuInterval setDoubleValue:[ourPrefs gpuInterval]];
+    [gpuIntervalDisplay takeDoubleValueFrom:gpuInterval];
+    [gpuGraphWidth setIntValue:[ourPrefs gpuGraphLength]];
+    [gpuGraphWidthLabel setStringValue:[NSString stringWithFormat:@"%d", [ourPrefs gpuGraphLength]]];
+    [menuBarPadding setIntValue:[ourPrefs menuBarHorizontalPadding]];
+    [menuBarPaddingLabel setStringValue:[NSString stringWithFormat:@"%d", [ourPrefs menuBarHorizontalPadding]]];
+    [gpuColor setColor:[ourPrefs gpuColor]];
+    [gpuTextColor setColor:[ourPrefs gpuTextColor]];
+    [gpuANEColor setColor:[ourPrefs gpuANEColor]];
+
+    BOOL graphEnabled = (mode & kGPUDisplayGraph) != 0;
+    [gpuGraphWidth setEnabled:graphEnabled];
+    [gpuGraphWidthLabel setTextColor:graphEnabled ? [NSColor controlTextColor] : [NSColor disabledControlTextColor]];
+
+    if ([self isExtraWithBundleIDLoaded:kGPUMenuBundleID]) {
+        [[NSNotificationCenter defaultCenter] postNotificationName:kGPUMenuBundleID
+                                                            object:kPrefChangeNotification
+                                                          userInfo:nil];
+    }
+    if (layoutChanged) {
+        [self notifyAllMenuExtrasOfLayoutChange];
+    }
+}
+
+- (void)notifyAllMenuExtrasOfLayoutChange
+{
+    for (NSString *bundleID in @[kCPUMenuBundleID, kGPUMenuBundleID, kDiskMenuBundleID, kMemMenuBundleID, kNetMenuBundleID]) {
+        if ([self isExtraWithBundleIDLoaded:bundleID]) {
+            [[NSNotificationCenter defaultCenter] postNotificationName:bundleID
+                                                                object:kPrefChangeNotification
+                                                              userInfo:nil];
+        }
+    }
+}
 
 - (IBAction)diskPrefChange:(id)sender {
 

@@ -78,6 +78,12 @@
 		339B8C90237FE17F008B9755 /* MenuMeters.icns in Resources */ = {isa = PBXBuildFile; fileRef = 339B8C8F237FE17F008B9755 /* MenuMeters.icns */; };
 		33B440112594675E00CBBEDF /* com.ragingmenace.MenuMeters.plist in Resources */ = {isa = PBXBuildFile; fileRef = 33B440102594675E00CBBEDF /* com.ragingmenace.MenuMeters.plist */; };
 		33B440122594675E00CBBEDF /* com.ragingmenace.MenuMeters.plist in Resources */ = {isa = PBXBuildFile; fileRef = 33B440102594675E00CBBEDF /* com.ragingmenace.MenuMeters.plist */; };
+		C0D3B0010000000000000001 /* MenuMeterGPUExtra.m in Sources */ = {isa = PBXBuildFile; fileRef = C0D3B1020000000000000001 /* MenuMeterGPUExtra.m */; };
+		C0D3B0020000000000000001 /* MenuMeterGPUExtra.m in Sources */ = {isa = PBXBuildFile; fileRef = C0D3B1020000000000000001 /* MenuMeterGPUExtra.m */; };
+		C0D3B0030000000000000001 /* AppleSiliconPerformanceReader.m in Sources */ = {isa = PBXBuildFile; fileRef = C0D3B1050000000000000001 /* AppleSiliconPerformanceReader.m */; };
+		C0D3B0040000000000000001 /* AppleSiliconPerformanceReader.m in Sources */ = {isa = PBXBuildFile; fileRef = C0D3B1050000000000000001 /* AppleSiliconPerformanceReader.m */; };
+		C0D3B0050000000000000001 /* libIOReport.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = C0D3B1060000000000000001 /* libIOReport.tbd */; };
+		C0D3B0060000000000000001 /* libIOReport.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = C0D3B1060000000000000001 /* libIOReport.tbd */; };
 		33F0921923673DAC00953CAB /* releases.html in Resources */ = {isa = PBXBuildFile; fileRef = 33F0921823673DAC00953CAB /* releases.html */; };
 		6349C10924BB733300C6FC99 /* EMCLoginItem.m in Sources */ = {isa = PBXBuildFile; fileRef = 908780A91FB087D70053DDC5 /* EMCLoginItem.m */; };
 		6349C10A24BB733300C6FC99 /* MenuMeterDiskExtra.m in Sources */ = {isa = PBXBuildFile; fileRef = D42EC95D03D49AE400A87BC9 /* MenuMeterDiskExtra.m */; };
@@ -296,6 +302,12 @@
 		D4FC162703D26AAA00A87BC9 /* MenuMeterNetConfig.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = MenuMeterNetConfig.m; sourceTree = "<group>"; };
 		D602BB8F207F9561004984C1 /* MenuMeterCPUTopProcesses.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MenuMeterCPUTopProcesses.h; path = MenuExtras/MenuMeterCPU/MenuMeterCPUTopProcesses.h; sourceTree = "<group>"; };
 		D602BB90207F9561004984C1 /* MenuMeterCPUTopProcesses.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MenuMeterCPUTopProcesses.m; path = MenuExtras/MenuMeterCPU/MenuMeterCPUTopProcesses.m; sourceTree = "<group>"; };
+		C0D3B1010000000000000001 /* MenuMeterGPUExtra.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MenuMeterGPUExtra.h; path = MenuExtras/MenuMeterGPU/MenuMeterGPUExtra.h; sourceTree = "<group>"; };
+		C0D3B1020000000000000001 /* MenuMeterGPUExtra.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = MenuMeterGPUExtra.m; path = MenuExtras/MenuMeterGPU/MenuMeterGPUExtra.m; sourceTree = "<group>"; };
+		C0D3B1030000000000000001 /* MenuMeterGPU.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MenuMeterGPU.h; path = Common/MenuMeterGPU.h; sourceTree = "<group>"; };
+		C0D3B1040000000000000001 /* AppleSiliconPerformanceReader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleSiliconPerformanceReader.h; sourceTree = "<group>"; };
+		C0D3B1050000000000000001 /* AppleSiliconPerformanceReader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AppleSiliconPerformanceReader.m; sourceTree = "<group>"; };
+		C0D3B1060000000000000001 /* libIOReport.tbd */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.text-based-dylib-definition; name = libIOReport.tbd; path = usr/lib/libIOReport.tbd; sourceTree = SDKROOT; };
 		F75EBE2E235B6F3600876CF7 /* smc_reader.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = smc_reader.h; sourceTree = "<group>"; };
 		F75EBE2F235B6F3600876CF7 /* smc_reader.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = smc_reader.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -306,6 +318,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				330247652366CB7A00F88D61 /* Sparkle.framework in Frameworks */,
+				C0D3B0050000000000000001 /* libIOReport.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -313,6 +326,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C0D3B0060000000000000001 /* libIOReport.tbd in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -375,6 +389,7 @@
 			isa = PBXGroup;
 			children = (
 				D477AAD603D4B9DE00A87BC9 /* MenuMeterCPU */,
+				C0D3B2010000000000000001 /* MenuMeterGPU */,
 				D42EC94703D498CC00A87BC9 /* MenuMeterDisk */,
 				D45F12C503D4886000A87BC9 /* MenuMeterMem */,
 				D40DB4CD03D2618F00A87BC9 /* MenuMeterNet */,
@@ -398,6 +413,7 @@
 				3345DD2E1B6BEFDE003843FC /* MenuMetersMenuExtraBase.m */,
 				D4510D9104F2F0FD00A87BC9 /* MenuMeters.h */,
 				D40DB4C403D260E800A87BC9 /* MenuMeterCPU.h */,
+				C0D3B1030000000000000001 /* MenuMeterGPU.h */,
 				D40DB4C503D260E800A87BC9 /* MenuMeterDisk.h */,
 				D40DB4C203D260E800A87BC9 /* MenuMeterMem.h */,
 				D40DB4C603D260E800A87BC9 /* MenuMeterNet.h */,
@@ -426,6 +442,7 @@
 				D403ADFF0E04F23800348443 /* PreferencePanes.framework */,
 				D403AE140E04F27000348443 /* Security.framework */,
 				D478F451101A8AE100C79173 /* IOKit.framework */,
+				C0D3B1060000000000000001 /* libIOReport.tbd */,
 			);
 			name = "System Frameworks";
 			sourceTree = "<group>";
@@ -492,6 +509,15 @@
 				D4D9D1F50644C7E200047FDD /* Disk ArrowsWrite.tiff */,
 			);
 			name = Icons;
+			sourceTree = "<group>";
+		};
+		C0D3B2010000000000000001 /* MenuMeterGPU */ = {
+			isa = PBXGroup;
+			children = (
+				C0D3B1010000000000000001 /* MenuMeterGPUExtra.h */,
+				C0D3B1020000000000000001 /* MenuMeterGPUExtra.m */,
+			);
+			name = MenuMeterGPU;
 			sourceTree = "<group>";
 		};
 		D4510D7304F2F06100A87BC9 /* Docs */ = {
@@ -593,6 +619,8 @@
 				F75EBE2F235B6F3600876CF7 /* smc_reader.m */,
 				3325978B25BE7DB10070CE37 /* applesilicon_hardware_reader.m */,
 				3325978F25BE7DCA0070CE37 /* applesilicon_hardware_reader.h */,
+				C0D3B1040000000000000001 /* AppleSiliconPerformanceReader.h */,
+				C0D3B1050000000000000001 /* AppleSiliconPerformanceReader.m */,
 				3391A11625C66B5F00B83705 /* TemperatureReader.h */,
 				3391A11725C66B5F00B83705 /* TemperatureReader.m */,
 			);
@@ -828,11 +856,13 @@
 				33883CF223655C9900B8AC14 /* main.m in Sources */,
 				33883CF323655C9900B8AC14 /* MenuMeterPowerMate.m in Sources */,
 				33883CF423655C9900B8AC14 /* MenuMeterCPUExtra.m in Sources */,
+				C0D3B0010000000000000001 /* MenuMeterGPUExtra.m in Sources */,
 				33883CF523655C9900B8AC14 /* MenuMeterMemExtra.m in Sources */,
 				33883CF623655C9900B8AC14 /* MenuMeterDefaults.m in Sources */,
 				3330C5B6257DFAED00BD5164 /* LocalizedStrings.m in Sources */,
 				33883CF723655C9900B8AC14 /* MenuMeterCPUStats.m in Sources */,
 				33883CF823655C9900B8AC14 /* MenuMetersMenuExtraBase.m in Sources */,
+				C0D3B0030000000000000001 /* AppleSiliconPerformanceReader.m in Sources */,
 				3325978C25BE7DB10070CE37 /* applesilicon_hardware_reader.m in Sources */,
 				33883CF923655C9900B8AC14 /* MenuMeterUptime.m in Sources */,
 				33883CFA23655C9900B8AC14 /* smc_reader.m in Sources */,
@@ -860,11 +890,13 @@
 				6349C10C24BB733300C6FC99 /* main.m in Sources */,
 				6349C10D24BB733300C6FC99 /* MenuMeterPowerMate.m in Sources */,
 				6349C10E24BB733300C6FC99 /* MenuMeterCPUExtra.m in Sources */,
+				C0D3B0020000000000000001 /* MenuMeterGPUExtra.m in Sources */,
 				6349C10F24BB733300C6FC99 /* MenuMeterMemExtra.m in Sources */,
 				6349C11024BB733300C6FC99 /* MenuMeterDefaults.m in Sources */,
 				3330C5B7257DFAED00BD5164 /* LocalizedStrings.m in Sources */,
 				6349C11124BB733300C6FC99 /* MenuMeterCPUStats.m in Sources */,
 				6349C11224BB733300C6FC99 /* MenuMetersMenuExtraBase.m in Sources */,
+				C0D3B0040000000000000001 /* AppleSiliconPerformanceReader.m in Sources */,
 				3325979325BE7DD00070CE37 /* applesilicon_hardware_reader.m in Sources */,
 				6349C11324BB733300C6FC99 /* MenuMeterUptime.m in Sources */,
 				6349C11424BB733300C6FC99 /* smc_reader.m in Sources */,

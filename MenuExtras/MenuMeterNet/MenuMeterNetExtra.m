@@ -50,6 +50,8 @@
 
 // Prefs
 - (void)configFromPrefs:(NSNotification *)notification;
+- (void)updateMenuWidth;
+- (CGFloat)currentThroughputValueWidth;
 
 // Data formatting
 - (NSString *)throughputStringForBytesPerSecond:(double)bps;
@@ -1080,6 +1082,7 @@
 	}
 	[netHistoryData addObject:netLoad];
 	[netHistoryIntervals addObject:[NSNumber numberWithDouble:currentSampleInterval]];
+	[self updateMenuWidth];
 
 	// Update for next sample
 	lastSampleDate = [NSDate date];
@@ -1387,9 +1390,15 @@
 	[downArrow closePath];
 	[downArrow setLineWidth:0.6f];
 
-
-
 	// Fix our menu view size to match our config
+	[self updateMenuWidth];
+
+	// Force initial update
+    [self updateStatusItemImage];
+} // configFromPrefs
+
+- (void)updateMenuWidth
+{
 	menuWidth = 0;
 	int displayCount = 0;
 	if ([ourPrefs netDisplayMode] & kNetDisplayGraph) {
@@ -1403,54 +1412,45 @@
 	if ([ourPrefs netDisplayMode] & kNetDisplayThroughput) {
 		displayCount++;
 		if ([ourPrefs netThroughputLabel]) menuWidth += ceil(throughputLabelWidth);
-		// Deal with localizable throughput suffix
-		float suffixMaxWidth = 0;
-		NSAttributedString *throughString = [[NSAttributedString alloc]
-												initWithString:[NSString stringWithFormat:@"999.9%@",
-																[localizedStrings objectForKey:[ourPrefs netThroughputBits] ? kBitPerSecondLabel : kBytePerSecondLabel]]
-													attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-																	throughputFont, NSFontAttributeName,
-																	nil]];
-		if ([throughString size].width > suffixMaxWidth) {
-			suffixMaxWidth = (float)[throughString size].width;
-		}
-		throughString = [[NSAttributedString alloc]
-							initWithString:[NSString stringWithFormat:@"999.9%@",
-												[localizedStrings objectForKey:[ourPrefs netThroughputBits] ? kKbPerSecondLabel : kKBPerSecondLabel]]
-								attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-												throughputFont, NSFontAttributeName,
-												nil]];
-		if ([throughString size].width > suffixMaxWidth) {
-			suffixMaxWidth = (float)[throughString size].width;
-		}
-		throughString = [[NSAttributedString alloc]
-							initWithString:[NSString stringWithFormat:@"999.9%@",
-												[localizedStrings objectForKey:[ourPrefs netThroughputBits] ? kMbPerSecondLabel : kMBPerSecondLabel]]
-								attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-												throughputFont, NSFontAttributeName,
-												nil]];
-		if ([throughString size].width > suffixMaxWidth) {
-			suffixMaxWidth = (float)[throughString size].width;
-		}
-		throughString = [[NSAttributedString alloc]
-							initWithString:[NSString stringWithFormat:@"999.9%@",
-												[localizedStrings objectForKey:[ourPrefs netThroughputBits] ? kGbPerSecondLabel : kGBPerSecondLabel]]
-								attributes:[NSDictionary dictionaryWithObjectsAndKeys:
-												throughputFont, NSFontAttributeName,
-												nil]];
-		if ([throughString size].width > suffixMaxWidth) {
-			suffixMaxWidth = (float)[throughString size].width;
-		}
-            menuWidth += ceilf(suffixMaxWidth); 
+		menuWidth += [self currentThroughputValueWidth];
 	}
 	// If more than one display is present we need to add a gaps
 	if (displayCount) {
 		menuWidth += ((displayCount - 1) * kNetDisplayGapWidth);
 	}
+	if (menuWidth < 18.0) {
+		menuWidth = 18.0;
+	}
+}
 
-	// Force initial update
-    statusItem.button.image=self.image;
-} // configFromPrefs
+- (CGFloat)currentThroughputValueWidth
+{
+	double txValue = 0;
+	double rxValue = 0;
+	BOOL interfaceUp = [[preferredInterfaceConfig objectForKey:@"interfaceup"] boolValue];
+	if (interfaceUp) {
+		NSDictionary *primaryStats = [[netHistoryData lastObject] objectForKey:[preferredInterfaceConfig objectForKey:@"statname"]];
+		if (primaryStats) {
+			txValue = [[primaryStats objectForKey:@"deltaout"] doubleValue];
+			rxValue = [[primaryStats objectForKey:@"deltain"] doubleValue];
+		}
+	}
+	if (txValue < 0) { txValue = 0;	}
+	if (rxValue < 0) { rxValue = 0;	}
+
+	double sampleInterval = [ourPrefs netInterval];
+	NSNumber *sampleIntervalNum = [netHistoryIntervals lastObject];
+	if (sampleIntervalNum && ([sampleIntervalNum doubleValue] > 0)) {
+		sampleInterval = [sampleIntervalNum doubleValue];
+	}
+
+	NSString *txString = [self menubarThroughputStringForBytes:txValue inInterval:sampleInterval];
+	NSString *rxString = [self menubarThroughputStringForBytes:rxValue inInterval:sampleInterval];
+	NSDictionary *attributes = @{NSFontAttributeName: throughputFont};
+	NSAttributedString *renderTxString = [[NSAttributedString alloc] initWithString:txString attributes:attributes];
+	NSAttributedString *renderRxString = [[NSAttributedString alloc] initWithString:rxString attributes:attributes];
+	return ceil(MAX([renderTxString size].width, [renderRxString size].width));
+}
 
 ///////////////////////////////////////////////////////////////
 //

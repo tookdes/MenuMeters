@@ -11,8 +11,12 @@
 
 #import "MenuMeterCPUExtra.h"
 #import "MenuMeterDiskExtra.h"
+#import "MenuMeterGPUExtra.h"
 #import "MenuMeterMemExtra.h"
 #import "MenuMeterNetExtra.h"
+#import "MenuMeterDefaults.h"
+#import "MenuMeters.h"
+#import "EMCLoginItem.h"
 
 #define kAppleInterfaceThemeChangedNotification        @"AppleInterfaceThemeChangedNotification"
 
@@ -62,10 +66,14 @@
 }
 -(NSImage*)image
 {
-    NSSize imageSize=NSMakeSize(menuWidth,self.imageHeight);
+    CGFloat padding = [[MenuMeterDefaults sharedMenuMeterDefaults] menuBarHorizontalPadding];
+    NSSize imageSize=NSMakeSize(menuWidth + 2.0 * padding,self.imageHeight);
     return [NSImage imageWithSize:imageSize
                           flipped:NO
                    drawingHandler:^BOOL(NSRect dstRect) {
+        NSAffineTransform *transform = [NSAffineTransform transform];
+        [transform translateXBy:padding yBy:0.0];
+        [transform concat];
         return [self renderImage];
     }];
 }
@@ -76,7 +84,7 @@
 }
 -(void)timerFired:(id)notused
 {
-    statusItem.button.image=self.image;
+    [self updateStatusItemImage];
     if(@available(macOS 12,*)){
         if(self.isInstalledButHiddenBySystem){
             [[NSNotificationCenter defaultCenter] postNotificationName:@"hiddenBySystem" object:nil];
@@ -114,6 +122,14 @@
     }
 }
 */
+- (void)updateStatusItemImage
+{
+    NSImage *image = self.image;
+    if (image) {
+        statusItem.length = image.size.width;
+        statusItem.button.image = image;
+    }
+}
 - (void)configDisplay:(NSString*)bundleID fromPrefs:(MenuMeterDefaults*)ourPrefs withTimerInterval:(NSTimeInterval)interval
 {
     if([ourPrefs loadBoolPref:bundleID defaultValue:YES]){
@@ -196,6 +212,9 @@
             if([self isKindOfClass:[MenuMeterCPUExtra class]]){
                 tab=1;
             }
+            if([self isKindOfClass:[MenuMeterGPUExtra class]]){
+                tab=2;
+            }
             // on some Mac's there is a "GPU" tab at the 2nd position.
             // So the rest needs to be addressed from the last
             if([self isKindOfClass:[MenuMeterDiskExtra class]]){
@@ -217,9 +236,39 @@
 //        }
     });
 } // openActivityMonitor
+- (void)toggleLaunchAtLogin:(id)sender
+{
+    EMCLoginItem *loginItem = [EMCLoginItem loginItemWithBundle:[NSBundle mainBundle]];
+    NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+    [defaults setBool:YES forKey:kMenuMetersLoginItemsMigratedPref];
+    if ([loginItem isLoginItem]) {
+        [loginItem removeLoginItem];
+        if ([sender respondsToSelector:@selector(setState:)]) {
+            [sender setState:NSOffState];
+        }
+    } else {
+        [loginItem addLoginItem];
+        if ([sender respondsToSelector:@selector(setState:)]) {
+            [sender setState:NSOnState];
+        }
+    }
+}
+- (void)quitMenuMeters:(id)sender
+{
+    [NSApp terminate:sender];
+}
+- (void)updateLaunchAtLoginMenuItemInMenu:(NSMenu *)menu
+{
+    for (NSMenuItem *item in menu.itemArray) {
+        if (item.action == @selector(toggleLaunchAtLogin:)) {
+            [item setState:[[EMCLoginItem loginItemWithBundle:[NSBundle mainBundle]] isLoginItem] ? NSOnState : NSOffState];
+            return;
+        }
+    }
+}
 - (void)addStandardMenuEntriesTo:(NSMenu*)extraMenu
 {
-    NSMenuItem* menuItem = (NSMenuItem *)[extraMenu addItemWithTitle:NSLocalizedString(kOpenActivityMonitorTitle, kOpenActivityMonitorTitle)
+    NSMenuItem *menuItem = (NSMenuItem *)[extraMenu addItemWithTitle:NSLocalizedString(kOpenActivityMonitorTitle, kOpenActivityMonitorTitle)
                                                               action:@selector(openActivityMonitor:)
                                                        keyEquivalent:@""];
     [menuItem setTarget:self];
@@ -227,7 +276,15 @@
                                                   action:@selector(openMenuMetersPref:)
                                            keyEquivalent:@""];
     [menuItem setTarget:self];
-
+    menuItem = (NSMenuItem *)[extraMenu addItemWithTitle:NSLocalizedString(kLaunchAtLoginTitle, kLaunchAtLoginTitle)
+                                                  action:@selector(toggleLaunchAtLogin:)
+                                           keyEquivalent:@""];
+    [menuItem setTarget:self];
+    [extraMenu addItem:[NSMenuItem separatorItem]];
+    menuItem = (NSMenuItem *)[extraMenu addItemWithTitle:NSLocalizedString(kQuitMenuMetersTitle, kQuitMenuMetersTitle)
+                                                  action:@selector(quitMenuMeters:)
+                                           keyEquivalent:@""];
+    [menuItem setTarget:self];
 }
 -(BOOL)isDark
 {
@@ -296,6 +353,7 @@
     statusItem.menu.delegate = self;
 }
 - (void)menuWillOpen:(NSMenu*)menu {
+    [self updateLaunchAtLoginMenuItemInMenu:menu];
     _isMenuVisible = YES;
 }
 - (void)menuDidClose:(NSMenu*)menu {

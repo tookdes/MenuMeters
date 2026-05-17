@@ -31,6 +31,7 @@
 #import "MenuMeterDefaults.h"
 #import "MenuMeterWorkarounds.h"
 #import "MenuMeterCPU.h"
+#import "MenuMeterGPU.h"
 #import "MenuMeterDisk.h"
 #import "MenuMeterMem.h"
 #import "MenuMeterNet.h"
@@ -147,6 +148,7 @@ NSWindowController<NSWindowDelegate, NSToolbarDelegate, NSTabViewDelegate>
 -(IBAction)openAbout:(id)sender;
 - (IBAction)liveUpdateInterval:(id)sender;
 - (IBAction)cpuPrefChange:(id)sender;
+- (IBAction)gpuPrefChange:(id)sender;
 - (IBAction)diskPrefChange:(id)sender;
 - (IBAction)memPrefChange:(id)sender;
 - (IBAction)netPrefChange:(id)sender;

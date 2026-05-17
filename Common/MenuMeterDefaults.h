@@ -75,6 +75,24 @@
 - (void)saveCpuTemperatureUnit:(int)unit;
 - (void)saveCpuTemperatureSensor:(NSString*)name;
 
+// GPU menu prefs
+- (double)gpuInterval;
+- (int)gpuDisplayMode;
+- (int)gpuGraphLength;
+- (NSColor *)gpuColor;
+- (NSColor *)gpuTextColor;
+- (NSColor *)gpuANEColor;
+- (void)saveGpuInterval:(double)interval;
+- (void)saveGpuDisplayMode:(int)mode;
+- (void)saveGpuGraphLength:(int)length;
+- (void)saveGpuColor:(NSColor *)color;
+- (void)saveGpuTextColor:(NSColor *)color;
+- (void)saveGpuANEColor:(NSColor *)color;
+
+// Shared menu bar layout prefs
+- (int)menuBarHorizontalPadding;
+- (void)saveMenuBarHorizontalPadding:(int)padding;
+
 // Disk menu prefs
 - (double)diskInterval;
 - (int)diskImageset;
@@ -88,6 +106,7 @@
 - (double)memInterval;
 - (int)memDisplayMode;
 - (BOOL)memUsedFreeLabel;
+- (BOOL)memDisplayGB;
 - (int)memGraphLength;
 - (BOOL)memPageIndicator;
 - (BOOL)memPressure;
@@ -103,6 +122,7 @@
 - (void)saveMemDisplayMode:(int)mode;
 - (void)saveMemPageIndicator:(BOOL)indicator;
 - (void)saveMemUsedFreeLabel:(BOOL)label;
+- (void)saveMemDisplayGB:(BOOL)displayGB;
 - (void)saveMemPressure:(BOOL)label;
 - (void)saveMemGraphLength:(int)length;
 - (void)saveMemFreeColor:(NSColor *)color;

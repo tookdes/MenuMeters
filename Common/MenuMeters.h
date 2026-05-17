@@ -39,6 +39,9 @@
 // Bundle ID for the CPU menu extra
 #define kCPUMenuBundleID				@"com.ragingmenace.MenuMeterCPU"
 
+// Bundle ID for the GPU menu extra
+#define kGPUMenuBundleID                @"com.ragingmenace.MenuMeterGPU"
+
 // Bundle ID for the Disk menu extra
 #define kDiskMenuBundleID				@"com.ragingmenace.MenuMeterDisk"
 
@@ -69,6 +72,9 @@
 #define	kPrefVersionKey					@"MenuMeterPrefVersion"
 #define	kCurrentPrefVersion				8
 
+// App-level preferences
+#define kMenuMetersLoginItemsMigratedPref @"LoginItemsMigrated"
+
 ///////////////////////////////////////////////////////////////
 //
 //	Notifications
@@ -80,6 +86,7 @@
 
 // Extras unload
 #define kCPUMenuUnloadNotification		@"cpuMenuUnload"
+#define kGPUMenuUnloadNotification      @"gpuMenuUnload"
 #define kDiskMenuUnloadNotification		@"diskMenuUnload"
 #define kMemMenuUnloadNotification		@"memMenuUnload"
 #define kNetMenuUnloadNotification		@"netMenuUnload"
