@@ -2,7 +2,11 @@
 
 This is a maintained personal fork of [yujitach/MenuMeters](https://github.com/yujitach/MenuMeters), built as a standalone macOS menu bar app.
 
-The current fork release is `2.1.6.3`. It keeps the original MenuMeters behavior, improves Chinese localization, and adds Apple Silicon GPU/ANE monitoring.
+The current fork release is `2.1.6.4`. It keeps the original MenuMeters behavior, improves Chinese localization, and adds Apple Silicon GPU/ANE monitoring.
+
+## What's New In 2.1.6.4
+
+- Fixed ANE power reading on M1 by subscribing to PMP energy counters. ANE energy data on M1 lives in the `PMP` group rather than `Energy Model`; the reader now merges `PMP` channels and parses `ANE`/`GPU`/`GPU SRAM` from `PMP` → `Energy Counters`.
 
 ## What's New In 2.1.6.3
 
