@@ -224,6 +224,12 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
         CFRelease(gpuChannels);
     }
 
+    CFDictionaryRef pmpChannels = IOReportCopyChannelsInGroup(CFSTR("PMP"), NULL, 0, 0, 0);
+    if (pmpChannels) {
+        IOReportMergeChannels(energyChannels, pmpChannels, NULL);
+        CFRelease(pmpChannels);
+    }
+
     channels = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, CFDictionaryGetCount(energyChannels), energyChannels);
     CFRelease(energyChannels);
     if (!channels) {
@@ -322,6 +328,28 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
                 }
                 sample.anePowerWatts += MAX(0.0, watts);
                 foundAnyMetric = YES;
+            }
+        } else if (strcmp(group, "PMP") == 0) {
+            char subgroup[128] = {0};
+            MMGetCString(IOReportChannelGetSubGroup(item), subgroup, sizeof(subgroup));
+            if (strcmp(subgroup, "Energy Counters") == 0) {
+                int64_t energy = IOReportSimpleGetIntegerValue(item, 0);
+                double watts = MMEnergyToWatts(energy, IOReportChannelGetUnitLabel(item), elapsed);
+                if (strcmp(channel, "ANE") == 0) {
+                    if (sample.anePowerWatts < 0.0) {
+                        sample.anePowerWatts = 0.0;
+                    }
+                    sample.anePowerWatts += MAX(0.0, watts);
+                    foundAnyMetric = YES;
+                } else if (strcmp(channel, "GPU") == 0) {
+                    if (sample.gpuPowerWatts < 0.0) {
+                        sample.gpuPowerWatts = MAX(0.0, watts);
+                        foundAnyMetric = YES;
+                    }
+                } else if (strncmp(channel, "GPU SRAM", 8) == 0) {
+                    sample.gpuSRAMPowerWatts += MAX(0.0, watts);
+                    foundAnyMetric = YES;
+                }
             }
         } else if (strcmp(group, "GPU Stats") == 0) {
             char subgroup[128] = {0};
