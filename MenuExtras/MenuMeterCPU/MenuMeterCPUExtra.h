@@ -31,7 +31,9 @@
 #import "MenuMeterUptime.h"
 #import "MenuMeterPowerMate.h"
 #import "MenuMeterWorkarounds.h"
+#if TARGET_CPU_ARM64
 #import "AppleSiliconPerformanceReader.h"
+#endif
 
 
 @interface MenuMeterCPUExtra : NSMenuExtra {
@@ -44,6 +46,11 @@
 	MenuMeterCPUStats				*cpuInfo;
     MenuMeterCPUTopProcesses        *cpuTopProcesses;
 	MenuMeterUptime					*uptimeInfo;
+#if TARGET_CPU_ARM64
+    AppleSiliconPerformanceReader   *performanceReader;
+    AppleSiliconPerformanceSample   *performanceSample;
+    NSNumberFormatter               *wattsFormatter;
+#endif
 	// PowerMate support
 	MenuMeterPowerMate				*powerMate;
 	// Prerendered percentage text displays and their calculated width
@@ -54,11 +61,7 @@
 	NSColor							*userColor,
 									*systemColor,
 									*fgMenuThemeColor,
-                                    *temperatureColor,
-                                    *cpuPowerColor;
-	// CPU power reading
-	AppleSiliconPerformanceReader	*performanceReader;
-	NSNumberFormatter				*wattsFormatter;
+                                    *temperatureColor;
 
 } // MenuMeterCPUExtra
 

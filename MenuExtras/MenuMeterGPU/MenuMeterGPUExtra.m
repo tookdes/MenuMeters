@@ -21,6 +21,7 @@
 - (void)addInterBlockGapAtX:(CGFloat *)x;
 - (NSString *)percentString:(double)value;
 - (NSString *)wattsString:(double)value;
+- (double)gpuTotalPowerWatts;
 - (CGFloat)textBlockWidthForLabel:(NSString *)label sampleValue:(NSString *)value;
 @end
 
@@ -114,7 +115,7 @@
     NSString *unavailable = [[NSBundle mainBundle] localizedStringForKey:kGPUUnavailable value:nil table:nil];
     NSString *usage = currentSample.gpuUsagePercent >= 0.0 ? [self percentString:currentSample.gpuUsagePercent] : unavailable;
     NSString *frequency = currentSample.gpuFrequencyMHz > 0 ? [NSString stringWithFormat:@"%ld MHz", (long)currentSample.gpuFrequencyMHz] : unavailable;
-    NSString *gpuWatts = currentSample.gpuPowerWatts >= 0.0 ? [self wattsString:(currentSample.gpuPowerWatts + currentSample.gpuSRAMPowerWatts)] : unavailable;
+    NSString *gpuWatts = [self gpuTotalPowerWatts] >= 0.0 ? [self wattsString:[self gpuTotalPowerWatts]] : unavailable;
     NSString *aneWatts = currentSample.anePowerWatts >= 0.0 ? [self wattsString:currentSample.anePowerWatts] : unavailable;
 
     LiveUpdateMenuItemTitle(extraMenu, kGPUUsageInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kGPUUsageTitle value:nil table:nil], usage]);
@@ -151,7 +152,7 @@
     }
     if (mode & kGPUDisplayPower) {
         [self addInterBlockGapAtX:&x];
-        [self appendTextBlockWithLabel:@"GPU" value:[self wattsString:(currentSample.gpuPowerWatts + currentSample.gpuSRAMPowerWatts)] atX:&x];
+        [self appendTextBlockWithLabel:@"GPU" value:[self wattsString:[self gpuTotalPowerWatts]] atX:&x];
     }
     if (mode & kGPUDisplayANEPower) {
         [self addInterBlockGapAtX:&x];
@@ -223,6 +224,14 @@
     return [wattsFormatter stringFromNumber:@(MAX(0.0, value))];
 }
 
+- (double)gpuTotalPowerWatts
+{
+    if (currentSample.gpuPowerWatts < 0.0) {
+        return -1.0;
+    }
+    return currentSample.gpuPowerWatts + MAX(0.0, currentSample.gpuSRAMPowerWatts);
+}
+
 - (CGFloat)textBlockWidthForLabel:(NSString *)label sampleValue:(NSString *)value
 {
     NSDictionary *attributes = @{
@@ -260,7 +269,7 @@
     }
     if (mode & kGPUDisplayPower) {
         [self addInterBlockGapAtX:&width];
-        width += [self textBlockWidthForLabel:@"GPU" sampleValue:[self wattsString:(currentSample.gpuPowerWatts + currentSample.gpuSRAMPowerWatts)]];
+        width += [self textBlockWidthForLabel:@"GPU" sampleValue:[self wattsString:[self gpuTotalPowerWatts]]];
     }
     if (mode & kGPUDisplayANEPower) {
         [self addInterBlockGapAtX:&width];

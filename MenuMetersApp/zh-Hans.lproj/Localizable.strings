@@ -7,6 +7,7 @@
 "Percentage" = "百分比";
 "Graph" = "曲线";
 "GPU Frequency" = "GPU 频率";
+"CPU Power" = "CPU 功耗";
 "GPU Power" = "GPU 功耗";
 "ANE Power" = "ANE 功耗";
 "CPU Power" = "CPU 功耗";
@@ -65,6 +66,7 @@
 "%@, %@, %@" = "%1$@， %2$@， %3$@";
 
 // CPU power limit status
+"CPU Power:" = "CPU 功耗：";
 "CPU power limit:" = "CPU 功耗限制：";
 "speed %@%%, scheduler %@%%" = "速度 %@%%，调度器 %@%%";
 

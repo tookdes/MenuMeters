@@ -53,6 +53,8 @@ extern int64_t IOReportStateGetResidency(CFDictionaryRef item, int32_t idx);
     CFMutableDictionaryRef channels;
     CFDictionaryRef previousSample;
     NSDate *previousSampleDate;
+    AppleSiliconPerformanceSample *cachedSample;
+    NSDate *cachedSampleDate;
     uint32_t gpuFrequencies[64];
     int gpuFrequencyCount;
 }
@@ -130,6 +132,28 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
     BOOL result = CFStringHasPrefix(string, prefixString);
     CFRelease(prefixString);
     return result;
+}
+
+static BOOL MMChannelNameEquals(const char *channel, const char *name)
+{
+    return channel && name && strcmp(channel, name) == 0;
+}
+
+static BOOL MMIsCPUEnergyClusterChannel(const char *channel)
+{
+    return MMChannelNameEquals(channel, "ECPU") || MMChannelNameEquals(channel, "PCPU");
+}
+
+static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef source)
+{
+    if (!source) {
+        return;
+    }
+    if (!*destination) {
+        *destination = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, CFDictionaryGetCount(source), source);
+    } else {
+        IOReportMergeChannels(*destination, source, NULL);
+    }
 }
 
 - (void)loadGPUFrequencies
@@ -213,25 +237,23 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
     initialized = YES;
 
     CFDictionaryRef energyChannels = IOReportCopyChannelsInGroup(CFSTR("Energy Model"), NULL, 0, 0, 0);
-    if (!energyChannels) {
-        available = NO;
-        return NO;
+    MMMergeChannels(&channels, energyChannels);
+    if (energyChannels) {
+        CFRelease(energyChannels);
     }
 
     CFDictionaryRef gpuChannels = IOReportCopyChannelsInGroup(CFSTR("GPU Stats"), NULL, 0, 0, 0);
+    MMMergeChannels(&channels, gpuChannels);
     if (gpuChannels) {
-        IOReportMergeChannels(energyChannels, gpuChannels, NULL);
         CFRelease(gpuChannels);
     }
 
     CFDictionaryRef pmpChannels = IOReportCopyChannelsInGroup(CFSTR("PMP"), NULL, 0, 0, 0);
+    MMMergeChannels(&channels, pmpChannels);
     if (pmpChannels) {
-        IOReportMergeChannels(energyChannels, pmpChannels, NULL);
         CFRelease(pmpChannels);
     }
 
-    channels = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, CFDictionaryGetCount(energyChannels), energyChannels);
-    CFRelease(energyChannels);
     if (!channels) {
         available = NO;
         return NO;
@@ -264,17 +286,22 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
     AppleSiliconPerformanceSample *sample = [[AppleSiliconPerformanceSample alloc] init];
     sample.gpuUsagePercent = -1.0;
     sample.gpuFrequencyMHz = 0;
+    sample.cpuPowerWatts = -1.0;
     sample.gpuPowerWatts = -1.0;
     sample.gpuSRAMPowerWatts = 0.0;
     sample.anePowerWatts = -1.0;
-    sample.cpuPowerWatts = -1.0;
+
+    NSDate *requestDate = [NSDate date];
+    if (cachedSample && cachedSampleDate && [requestDate timeIntervalSinceDate:cachedSampleDate] < 0.2) {
+        return cachedSample;
+    }
 
     if (![self initializeIfNeeded]) {
         return sample;
     }
 
     CFDictionaryRef currentSample = IOReportCreateSamples(subscription, channels, NULL);
-    NSDate *currentDate = [NSDate date];
+    NSDate *currentDate = requestDate;
     if (!currentSample) {
         return sample;
     }
@@ -286,6 +313,8 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
         previousSample = currentSample;
         previousSampleDate = currentDate;
         sample.available = YES;
+        cachedSample = sample;
+        cachedSampleDate = currentDate;
         return sample;
     }
 
@@ -302,6 +331,24 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
     CFArrayRef reportChannels = CFDictionaryGetValue(delta, CFSTR("IOReportChannels"));
     CFIndex count = reportChannels ? CFArrayGetCount(reportChannels) : 0;
     BOOL foundAnyMetric = NO;
+    BOOL hasModelCPUAggregate = NO;
+    BOOL hasModelCPUCluster = NO;
+    BOOL hasModelGPUCore = NO;
+    BOOL hasModelGPUFallback = NO;
+    BOOL hasModelGPUSRAM = NO;
+    BOOL hasModelANE = NO;
+    BOOL hasPMPGPUCore = NO;
+    BOOL hasPMPGPUSRAM = NO;
+    BOOL hasPMPANE = NO;
+    double modelCPUAggregateWatts = 0.0;
+    double modelCPUClusterWatts = 0.0;
+    double modelGPUCoreWatts = 0.0;
+    double modelGPUFallbackWatts = 0.0;
+    double modelGPUSRAMWatts = 0.0;
+    double modelANEWatts = 0.0;
+    double pmpGPUCoreWatts = 0.0;
+    double pmpGPUSRAMWatts = 0.0;
+    double pmpANEWatts = 0.0;
 
     for (CFIndex i = 0; i < count; i++) {
         CFDictionaryRef item = (CFDictionaryRef)CFArrayGetValueAtIndex(reportChannels, i);
@@ -317,47 +364,40 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
         if (strcmp(group, "Energy Model") == 0) {
             int64_t energy = IOReportSimpleGetIntegerValue(item, 0);
             double watts = MMEnergyToWatts(energy, IOReportChannelGetUnitLabel(item), elapsed);
-            if (strcmp(channel, "GPU Energy") == 0) {
-                sample.gpuPowerWatts = MAX(0.0, watts);
-                foundAnyMetric = YES;
-            } else if (strncmp(channel, "GPU SRAM", 8) == 0) {
-                sample.gpuSRAMPowerWatts += MAX(0.0, watts);
-                foundAnyMetric = YES;
-            } else if (strncmp(channel, "ANE", 3) == 0) {
-                if (sample.anePowerWatts < 0.0) {
-                    sample.anePowerWatts = 0.0;
-                }
-                sample.anePowerWatts += MAX(0.0, watts);
-                foundAnyMetric = YES;
-            } else if (strcmp(channel, "CPU Energy") == 0) {
-                sample.cpuPowerWatts = MAX(0.0, watts);
-                foundAnyMetric = YES;
+            if (MMChannelNameEquals(channel, "CPU Energy")) {
+                modelCPUAggregateWatts = MAX(0.0, watts);
+                hasModelCPUAggregate = YES;
+            } else if (MMIsCPUEnergyClusterChannel(channel)) {
+                modelCPUClusterWatts += MAX(0.0, watts);
+                hasModelCPUCluster = YES;
+            } else if (MMChannelNameEquals(channel, "GPU Energy")) {
+                modelGPUCoreWatts = MAX(0.0, watts);
+                hasModelGPUCore = YES;
+            } else if (MMChannelNameEquals(channel, "GPU")) {
+                modelGPUFallbackWatts = MAX(0.0, watts);
+                hasModelGPUFallback = YES;
+            } else if (MMChannelNameEquals(channel, "GPU SRAM")) {
+                modelGPUSRAMWatts = MAX(0.0, watts);
+                hasModelGPUSRAM = YES;
+            } else if (MMChannelNameEquals(channel, "ANE")) {
+                modelANEWatts = MAX(0.0, watts);
+                hasModelANE = YES;
             }
         } else if (strcmp(group, "PMP") == 0) {
             char subgroup[128] = {0};
             MMGetCString(IOReportChannelGetSubGroup(item), subgroup, sizeof(subgroup));
-            if (strcmp(subgroup, "Energy Counters") == 0) {
+            if (strcmp(subgroup, "Energy Counters") == 0 || strcmp(subgroup, "Energy") == 0) {
                 int64_t energy = IOReportSimpleGetIntegerValue(item, 0);
                 double watts = MMEnergyToWatts(energy, IOReportChannelGetUnitLabel(item), elapsed);
-                if (strcmp(channel, "ANE") == 0) {
-                    if (sample.anePowerWatts < 0.0) {
-                        sample.anePowerWatts = 0.0;
-                    }
-                    sample.anePowerWatts += MAX(0.0, watts);
-                    foundAnyMetric = YES;
-                } else if (strcmp(channel, "GPU") == 0) {
-                    if (sample.gpuPowerWatts < 0.0) {
-                        sample.gpuPowerWatts = MAX(0.0, watts);
-                        foundAnyMetric = YES;
-                    }
-                } else if (strncmp(channel, "GPU SRAM", 8) == 0) {
-                    sample.gpuSRAMPowerWatts += MAX(0.0, watts);
-                    foundAnyMetric = YES;
-                } else if (strcmp(channel, "CPU") == 0) {
-                    if (sample.cpuPowerWatts < 0.0) {
-                        sample.cpuPowerWatts = MAX(0.0, watts);
-                        foundAnyMetric = YES;
-                    }
+                if (MMChannelNameEquals(channel, "ANE")) {
+                    pmpANEWatts = MAX(0.0, watts);
+                    hasPMPANE = YES;
+                } else if (MMChannelNameEquals(channel, "GPU") || MMChannelNameEquals(channel, "AGX")) {
+                    pmpGPUCoreWatts = MAX(0.0, watts);
+                    hasPMPGPUCore = YES;
+                } else if (MMChannelNameEquals(channel, "GPU SRAM") || MMChannelNameEquals(channel, "AGX SRAM")) {
+                    pmpGPUSRAMWatts = MAX(0.0, watts);
+                    hasPMPGPUSRAM = YES;
                 }
             }
         } else if (strcmp(group, "GPU Stats") == 0) {
@@ -398,8 +438,42 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
         }
     }
 
+    if (hasModelCPUAggregate) {
+        sample.cpuPowerWatts = modelCPUAggregateWatts;
+        foundAnyMetric = YES;
+    } else if (hasModelCPUCluster) {
+        sample.cpuPowerWatts = modelCPUClusterWatts;
+        foundAnyMetric = YES;
+    }
+    if (hasModelGPUCore) {
+        sample.gpuPowerWatts = modelGPUCoreWatts;
+        foundAnyMetric = YES;
+    } else if (hasModelGPUFallback) {
+        sample.gpuPowerWatts = modelGPUFallbackWatts;
+        foundAnyMetric = YES;
+    } else if (hasPMPGPUCore) {
+        sample.gpuPowerWatts = pmpGPUCoreWatts;
+        foundAnyMetric = YES;
+    }
+    if (hasModelGPUSRAM) {
+        sample.gpuSRAMPowerWatts = modelGPUSRAMWatts;
+        foundAnyMetric = YES;
+    } else if (hasPMPGPUSRAM) {
+        sample.gpuSRAMPowerWatts = pmpGPUSRAMWatts;
+        foundAnyMetric = YES;
+    }
+    if (hasModelANE) {
+        sample.anePowerWatts = modelANEWatts;
+        foundAnyMetric = YES;
+    } else if (hasPMPANE) {
+        sample.anePowerWatts = pmpANEWatts;
+        foundAnyMetric = YES;
+    }
+
     CFRelease(delta);
     sample.available = foundAnyMetric;
+    cachedSample = sample;
+    cachedSampleDate = currentDate;
     return sample;
 }
 

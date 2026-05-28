@@ -35,6 +35,10 @@
 // Timer callbacks
 - (void)updateMenuWhenDown;
 - (void)updatePowerMate;
+#if TARGET_CPU_ARM64
+- (NSString *)wattsString:(double)value;
+- (void)renderSinglePowerAtOffset:(float)offset;
+#endif
 
 // Menu actions
 - (void)openProcessViewer:(id)sender;
@@ -69,6 +73,10 @@
 #define kOpenConsoleTitle					@"Open Console"
 #define kNoInfoErrorMessage					@"No info available"
 #define kCPUPowerLimitStatusTitle @"CPU power limit:"
+#if TARGET_CPU_ARM64
+#define kCPUPowerTitle @"CPU Power:"
+#define kCPUUnavailable @"Unavailable"
+#endif
 
 ///////////////////////////////////////////////////////////////
 //
@@ -79,6 +87,9 @@
 @implementation MenuMeterCPUExtra
 {
     float cpuTemperatureDisplayWidth;
+#if TARGET_CPU_ARM64
+    float cpuPowerDisplayWidth;
+#endif
 }
 
 - (instancetype)init {
@@ -102,17 +113,23 @@
 	cpuInfo = [[MenuMeterCPUStats alloc] init];
     cpuTopProcesses = [[MenuMeterCPUTopProcesses alloc] init];
 	uptimeInfo = [[MenuMeterUptime alloc] init];
+#if TARGET_CPU_ARM64
+    performanceReader = [AppleSiliconPerformanceReader sharedReader];
+    performanceSample = [[AppleSiliconPerformanceSample alloc] init];
+#endif
 	loadHistory = [NSMutableArray array];
-	performanceReader = [AppleSiliconPerformanceReader sharedReader];
-	wattsFormatter = [[NSNumberFormatter alloc] init];
-	wattsFormatter.minimumFractionDigits = 1;
-	wattsFormatter.maximumFractionDigits = 1;
-	wattsFormatter.positiveSuffix = @"W";
-	wattsFormatter.negativeSuffix = @"W";
 	if (!(cpuInfo && uptimeInfo && loadHistory && cpuTopProcesses)) {
 		NSLog(@"MenuMeterCPU unable to load data gatherers or storage. Abort.");
 		return nil;
 	}
+
+#if TARGET_CPU_ARM64
+    wattsFormatter = [[NSNumberFormatter alloc] init];
+    wattsFormatter.minimumFractionDigits = 1;
+    wattsFormatter.maximumFractionDigits = 1;
+    wattsFormatter.positiveSuffix = @"W";
+    wattsFormatter.negativeSuffix = @"W";
+#endif
 
 	// Setup our menu
 	extraMenu = [[NSMenu alloc] initWithTitle:@""];
@@ -172,6 +189,15 @@
 	menuItem = [extraMenu addItemWithTitle:@"" action:nil keyEquivalent:@""];
     menuItem.indentationLevel=1;
 	[menuItem setEnabled:NO];
+#if TARGET_CPU_ARM64
+    menuItem = [extraMenu addItemWithTitle:[bundle localizedStringForKey:kCPUPowerTitle value:nil table:nil]
+                                    action:nil
+                             keyEquivalent:@""];
+    [menuItem setEnabled:NO];
+    menuItem = [extraMenu addItemWithTitle:@"" action:nil keyEquivalent:@""];
+    menuItem.indentationLevel=1;
+    [menuItem setEnabled:NO];
+#endif
 #if TARGET_CPU_X86_64
 	menuItem = [extraMenu addItemWithTitle:[bundle localizedStringForKey:kCPUPowerLimitStatusTitle value:nil table:nil]
 												  action:nil
@@ -250,6 +276,12 @@
         [self renderSingleTemperatureAtOffset:renderOffset];
         renderOffset += cpuTemperatureDisplayWidth;
     }
+#if TARGET_CPU_ARM64
+    if ([ourPrefs cpuDisplayMode] & kCPUDisplayPower) {
+        [self renderSinglePowerAtOffset:renderOffset];
+        renderOffset += cpuPowerDisplayWidth;
+    }
+#endif
     if ([ourPrefs cpuDisplayMode] & kCPUDisplayHorizontalThermometer) {
         // Calculate the minimum number of columns that will be needed
         uint32_t rowCount = [ourPrefs cpuHorizontalRows];
@@ -257,7 +289,7 @@
         uint32_t columnCount = (cpuCount+rowCount-1)/rowCount;
             //((cpuCount - 1) / [ourPrefs cpuHorizontalRows]) + 1;
         // Calculate a column width
-        float columnWidth = (menuWidth - 1.0f) / columnCount;
+        float columnWidth = (menuWidth - renderOffset - 1.0f) / columnCount;
         // Image height
         float imageHeight = self.imageHeight;
         // Calculate a thermometer height
@@ -300,13 +332,6 @@
 			if ([ourPrefs cpuAvgAllProcs]) break;
 		}
     }
-    // Render CPU power if enabled
-    if ([ourPrefs cpuDisplayMode] & kCPUDisplayPower) {
-        if (renderOffset > 0.0f) {
-            renderOffset += 4.0f;
-        }
-        [self renderPowerAtOffset:renderOffset];
-    }
 
 	// Send it back for the view to render
 	return YES;
@@ -314,6 +339,9 @@
 } // image
 
 - (NSMenu *)menu {
+#if TARGET_CPU_ARM64
+    performanceSample = [performanceReader currentSample];
+#endif
 
 	// Update the various displays starting with uptime
 	NSString *title = [uptimeInfo uptime];
@@ -326,6 +354,11 @@
 	// Load
 	title = [cpuInfo loadAverage];
 	if (title) LiveUpdateMenuItemTitle(extraMenu, kCPULoadInfoMenuIndex, title);
+
+#if TARGET_CPU_ARM64
+    title = performanceSample.cpuPowerWatts >= 0.0 ? [self wattsString:performanceSample.cpuPowerWatts] : [[NSBundle mainBundle] localizedStringForKey:kCPUUnavailable value:nil table:nil];
+    LiveUpdateMenuItemTitle(extraMenu, kCPUPowerInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kCPUPowerTitle value:nil table:nil], title]);
+#endif
 
 #if TARGET_CPU_X86_64
     title = [cpuInfo cpuPowerLimitStatus];
@@ -452,44 +485,6 @@
                                                 attributes:textAttributes];
     return cacheText;
 }
-
-- (NSString *)wattsString:(double)value {
-    if (value < 0.0) {
-        return @"--W";
-    }
-    return [wattsFormatter stringFromNumber:@(MAX(0.0, value))];
-}
-
-- (CGFloat)cpuPowerWidth {
-    NSDictionary *attributes = @{
-        NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular]
-    };
-    NSAttributedString *labelString = [[NSAttributedString alloc] initWithString:@"CPU" attributes:attributes];
-    NSAttributedString *valueString = [[NSAttributedString alloc] initWithString:[self wattsString:10.0] attributes:attributes];
-    return MAX(ceil(labelString.size.width), ceil(valueString.size.width));
-}
-
-- (void)renderPowerAtOffset:(float)offset {
-    AppleSiliconPerformanceSample *sample = [performanceReader currentSample];
-    NSString *label = @"CPU";
-    NSString *value = [self wattsString:sample.cpuPowerWatts];
-
-    NSDictionary *labelAttributes = @{
-        NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular],
-        NSForegroundColorAttributeName: cpuPowerColor
-    };
-    NSDictionary *valueAttributes = @{
-        NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular],
-        NSForegroundColorAttributeName: cpuPowerColor
-    };
-
-    NSAttributedString *labelString = [[NSAttributedString alloc] initWithString:label attributes:labelAttributes];
-    NSAttributedString *valueString = [[NSAttributedString alloc] initWithString:value attributes:valueAttributes];
-    CGFloat width = MAX(ceil(labelString.size.width), ceil(valueString.size.width));
-    [labelString drawAtPoint:NSMakePoint(offset + round(width - labelString.size.width), floor(self.imageHeight / 2.0) - 1.0)];
-    [valueString drawAtPoint:NSMakePoint(offset + round(width - valueString.size.width), -1.0)];
-}
-
 - (void)renderSinglePercentForProcessor:(uint32_t)processor atOffset:(float)offset {
     
 
@@ -570,6 +565,30 @@
     )];
 } // renderSingleTemperatureIntoImage:atOffset:
 
+#if TARGET_CPU_ARM64
+- (NSString *)wattsString:(double)value
+{
+    if (value < 0.0) {
+        return @"--W";
+    }
+    return [wattsFormatter stringFromNumber:@(MAX(0.0, value))];
+}
+
+- (void)renderSinglePowerAtOffset:(float)offset
+{
+    NSString *powerString = [self wattsString:performanceSample.cpuPowerWatts];
+    NSAttributedString *renderPowerString = [[NSAttributedString alloc]
+        initWithString:powerString
+            attributes:[NSDictionary dictionaryWithObjectsAndKeys:
+                        [NSFont monospacedDigitSystemFontOfSize:self.fontSize weight:NSFontWeightRegular],
+                        NSFontAttributeName, fgMenuThemeColor, NSForegroundColorAttributeName,
+                        nil]];
+    [renderPowerString drawAtPoint:NSMakePoint(
+        offset + cpuPowerDisplayWidth - (float)round([renderPowerString size].width) - 1,
+        (float)((self.imageHeight - [renderPowerString size].height) / 2 + self.baselineOffset)
+    )];
+}
+#endif
 
 - (void)renderThermometerForProcessor:(uint32_t)processor atOffset:(float)offset {
 
@@ -645,6 +664,9 @@
 		[loadHistory removeAllObjects];
 	}
 	[loadHistory addObject:currentLoad];
+#if TARGET_CPU_ARM64
+    performanceSample = [performanceReader currentSample];
+#endif
 
 	// If the menu is down force it to update
 	if (self.isMenuVisible) {
@@ -757,7 +779,6 @@
     userColor = [self colorByAdjustingForLightDark:[ourPrefs cpuUserColor]];
     systemColor = [self colorByAdjustingForLightDark:[ourPrefs cpuSystemColor]];
     temperatureColor = [self colorByAdjustingForLightDark:[ourPrefs cpuTemperatureColor]];
-    cpuPowerColor = [self colorByAdjustingForLightDark:[ourPrefs cpuPowerColor]];
 }
 - (void)configFromPrefs:(NSNotification *)notification {
 #ifdef ELCAPITAN
@@ -797,12 +818,17 @@
         cpuTemperatureDisplayWidth=1+[self renderTemperatureStringForString:@"66.6℃"].size.width;
         menuWidth += cpuTemperatureDisplayWidth;
     }
+#if TARGET_CPU_ARM64
     if ([ourPrefs cpuDisplayMode] & kCPUDisplayPower) {
-        if (menuWidth > 0) {
-            menuWidth += 4.0f;
-        }
-        menuWidth += [self cpuPowerWidth];
+        cpuPowerDisplayWidth=1+[[[NSAttributedString alloc]
+            initWithString:@"99.9W"
+                attributes:[NSDictionary dictionaryWithObjectsAndKeys:
+                            [NSFont monospacedDigitSystemFontOfSize:self.fontSize weight:NSFontWeightRegular],
+                            NSFontAttributeName, fgMenuThemeColor, NSForegroundColorAttributeName,
+                            nil]] size].width;
+        menuWidth += cpuPowerDisplayWidth;
     }
+#endif
     if(![ourPrefs cpuShowTemperature] && [ourPrefs cpuDisplayMode]==0){
         menuWidth=kCPULabelOnlyWidth;
     }
