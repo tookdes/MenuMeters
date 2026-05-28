@@ -616,6 +616,14 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
                                               frame:NSMakeRect(412, 521, 125, 22)
                                              action:@selector(gpuPrefChange:)];
     [cpuView addSubview:cpuPaneANEPowerToggle];
+
+    cpuPowerToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"CPU Power"]
+                                       frame:NSMakeRect(305, 521, 95, 22)
+                                      action:@selector(cpuPrefChange:)];
+    [cpuView addSubview:cpuPowerToggle];
+
+    cpuPowerColorWell = [self colorWellWithFrame:NSMakeRect(305, 488, 53, 30) action:@selector(cpuPrefChange:)];
+    [cpuView addSubview:cpuPowerColorWell];
 }
 
 - (void)updateTemperatureSensors
@@ -804,6 +812,8 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
         r|=kCPUDisplayThermometer;
     if([cpuHorizontalThermometer state]==NSOnState)
         r|=kCPUDisplayHorizontalThermometer;
+    if([cpuPowerToggle state]==NSOnState)
+        r|=kCPUDisplayPower;
     return r;
 }
 - (IBAction)cpuPrefChange:(id)sender {
@@ -820,8 +830,11 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     if (sender == cpuPercentage
         || sender == cpuGraph
         || sender == cpuThermometer
-        || sender == cpuHorizontalThermometer) {
+        || sender == cpuHorizontalThermometer
+        || sender == cpuPowerToggle) {
 		[ourPrefs saveCpuDisplayMode:[self cpuDisplayMode]];
+    } else if (sender == cpuPowerColorWell) {
+        [ourPrefs saveCpuPowerColor:[cpuPowerColorWell color]];
     } else if (sender == cpuTemperatureToggle) {
         bool show = ([cpuTemperatureToggle state] == NSOnState) ? YES : NO;
         [ourPrefs saveCpuTemperature:show];
@@ -907,6 +920,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
         [cpuGraph setState:([ourPrefs cpuDisplayMode]&kCPUDisplayGraph)?NSOnState:NSOffState];
         [cpuThermometer setState:([ourPrefs cpuDisplayMode]&kCPUDisplayThermometer)?NSOnState:NSOffState];
         [cpuHorizontalThermometer setState:([ourPrefs cpuDisplayMode]&kCPUDisplayHorizontalThermometer)?NSOnState:NSOffState];
+        [cpuPowerToggle setState:([ourPrefs cpuDisplayMode]&kCPUDisplayPower)?NSOnState:NSOffState];
     if([cpuHorizontalThermometer state]==NSOnState){
         [cpuPercentage setEnabled:NO];
         [cpuGraph setEnabled:NO];
@@ -917,6 +931,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
         [cpuThermometer setEnabled:YES];
     }
     [cpuTemperatureToggle setState:[ourPrefs cpuShowTemperature]];
+    [cpuPowerColorWell setColor:[ourPrefs cpuPowerColor]];
         [cpuTemperatureUnit selectItemAtIndex:[ourPrefs cpuTemperatureUnit]];
 	[cpuInterval setDoubleValue:[ourPrefs cpuInterval]];
 	[cpuPercentMode selectItemAtIndex:-1]; // Work around multiselects. AppKit problem?

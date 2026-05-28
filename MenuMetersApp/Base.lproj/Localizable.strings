@@ -9,6 +9,7 @@
 "GPU Frequency" = "GPU Frequency";
 "GPU Power" = "GPU Power";
 "ANE Power" = "ANE Power";
+"CPU Power" = "CPU Power";
 "Timing and Width" = "Timing and Width";
 "Update interval (seconds):" = "Update interval (seconds):";
 "Graph width:" = "Graph width:";

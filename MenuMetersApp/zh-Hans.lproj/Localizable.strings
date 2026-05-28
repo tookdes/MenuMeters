@@ -9,6 +9,7 @@
 "GPU Frequency" = "GPU 频率";
 "GPU Power" = "GPU 功耗";
 "ANE Power" = "ANE 功耗";
+"CPU Power" = "CPU 功耗";
 "Timing and Width" = "时间和宽度";
 "Update interval (seconds):" = "更新间隔(秒)：";
 "Graph width:" = "曲线宽度：";

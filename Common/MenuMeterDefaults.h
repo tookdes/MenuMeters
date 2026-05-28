@@ -55,6 +55,7 @@
 - (NSColor *)cpuSystemColor;
 - (NSColor *)cpuUserColor;
 - (NSColor *)cpuTemperatureColor;
+- (NSColor *)cpuPowerColor;
 - (void)saveCpuInterval:(double)interval;
 - (void)saveCpuDisplayMode:(int)mode;
 - (void)saveCpuPercentDisplay:(int)mode;
@@ -72,6 +73,7 @@
 - (void)saveCpuSystemColor:(NSColor *)color;
 - (void)saveCpuUserColor:(NSColor *)color;
 - (void)saveCpuTemperatureColor:(NSColor *)color;
+- (void)saveCpuPowerColor:(NSColor *)color;
 - (void)saveCpuTemperatureUnit:(int)unit;
 - (void)saveCpuTemperatureSensor:(NSString*)name;
 

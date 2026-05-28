@@ -103,6 +103,12 @@
     cpuTopProcesses = [[MenuMeterCPUTopProcesses alloc] init];
 	uptimeInfo = [[MenuMeterUptime alloc] init];
 	loadHistory = [NSMutableArray array];
+	performanceReader = [AppleSiliconPerformanceReader sharedReader];
+	wattsFormatter = [[NSNumberFormatter alloc] init];
+	wattsFormatter.minimumFractionDigits = 1;
+	wattsFormatter.maximumFractionDigits = 1;
+	wattsFormatter.positiveSuffix = @"W";
+	wattsFormatter.negativeSuffix = @"W";
 	if (!(cpuInfo && uptimeInfo && loadHistory && cpuTopProcesses)) {
 		NSLog(@"MenuMeterCPU unable to load data gatherers or storage. Abort.");
 		return nil;
@@ -294,6 +300,13 @@
 			if ([ourPrefs cpuAvgAllProcs]) break;
 		}
     }
+    // Render CPU power if enabled
+    if ([ourPrefs cpuDisplayMode] & kCPUDisplayPower) {
+        if (renderOffset > 0.0f) {
+            renderOffset += 4.0f;
+        }
+        [self renderPowerAtOffset:renderOffset];
+    }
 
 	// Send it back for the view to render
 	return YES;
@@ -439,6 +452,44 @@
                                                 attributes:textAttributes];
     return cacheText;
 }
+
+- (NSString *)wattsString:(double)value {
+    if (value < 0.0) {
+        return @"--W";
+    }
+    return [wattsFormatter stringFromNumber:@(MAX(0.0, value))];
+}
+
+- (CGFloat)cpuPowerWidth {
+    NSDictionary *attributes = @{
+        NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular]
+    };
+    NSAttributedString *labelString = [[NSAttributedString alloc] initWithString:@"CPU" attributes:attributes];
+    NSAttributedString *valueString = [[NSAttributedString alloc] initWithString:[self wattsString:10.0] attributes:attributes];
+    return MAX(ceil(labelString.size.width), ceil(valueString.size.width));
+}
+
+- (void)renderPowerAtOffset:(float)offset {
+    AppleSiliconPerformanceSample *sample = [performanceReader currentSample];
+    NSString *label = @"CPU";
+    NSString *value = [self wattsString:sample.cpuPowerWatts];
+
+    NSDictionary *labelAttributes = @{
+        NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular],
+        NSForegroundColorAttributeName: cpuPowerColor
+    };
+    NSDictionary *valueAttributes = @{
+        NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular],
+        NSForegroundColorAttributeName: cpuPowerColor
+    };
+
+    NSAttributedString *labelString = [[NSAttributedString alloc] initWithString:label attributes:labelAttributes];
+    NSAttributedString *valueString = [[NSAttributedString alloc] initWithString:value attributes:valueAttributes];
+    CGFloat width = MAX(ceil(labelString.size.width), ceil(valueString.size.width));
+    [labelString drawAtPoint:NSMakePoint(offset + round(width - labelString.size.width), floor(self.imageHeight / 2.0) - 1.0)];
+    [valueString drawAtPoint:NSMakePoint(offset + round(width - valueString.size.width), -1.0)];
+}
+
 - (void)renderSinglePercentForProcessor:(uint32_t)processor atOffset:(float)offset {
     
 
@@ -706,6 +757,7 @@
     userColor = [self colorByAdjustingForLightDark:[ourPrefs cpuUserColor]];
     systemColor = [self colorByAdjustingForLightDark:[ourPrefs cpuSystemColor]];
     temperatureColor = [self colorByAdjustingForLightDark:[ourPrefs cpuTemperatureColor]];
+    cpuPowerColor = [self colorByAdjustingForLightDark:[ourPrefs cpuPowerColor]];
 }
 - (void)configFromPrefs:(NSNotification *)notification {
 #ifdef ELCAPITAN
@@ -744,6 +796,12 @@
     if ([ourPrefs cpuShowTemperature]) {
         cpuTemperatureDisplayWidth=1+[self renderTemperatureStringForString:@"66.6℃"].size.width;
         menuWidth += cpuTemperatureDisplayWidth;
+    }
+    if ([ourPrefs cpuDisplayMode] & kCPUDisplayPower) {
+        if (menuWidth > 0) {
+            menuWidth += 4.0f;
+        }
+        menuWidth += [self cpuPowerWidth];
     }
     if(![ourPrefs cpuShowTemperature] && [ourPrefs cpuDisplayMode]==0){
         menuWidth=kCPULabelOnlyWidth;

@@ -31,6 +31,7 @@
 #import "MenuMeterUptime.h"
 #import "MenuMeterPowerMate.h"
 #import "MenuMeterWorkarounds.h"
+#import "AppleSiliconPerformanceReader.h"
 
 
 @interface MenuMeterCPUExtra : NSMenuExtra {
@@ -53,7 +54,11 @@
 	NSColor							*userColor,
 									*systemColor,
 									*fgMenuThemeColor,
-                                    *temperatureColor;
+                                    *temperatureColor,
+                                    *cpuPowerColor;
+	// CPU power reading
+	AppleSiliconPerformanceReader	*performanceReader;
+	NSNumberFormatter				*wattsFormatter;
 
 } // MenuMeterCPUExtra
 

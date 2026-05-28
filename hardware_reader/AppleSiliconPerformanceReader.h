@@ -13,6 +13,7 @@
 @property(nonatomic) double gpuPowerWatts;
 @property(nonatomic) double gpuSRAMPowerWatts;
 @property(nonatomic) double anePowerWatts;
+@property(nonatomic) double cpuPowerWatts;
 
 @end
 

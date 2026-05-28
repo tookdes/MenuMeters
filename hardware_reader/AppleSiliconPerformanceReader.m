@@ -267,6 +267,7 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
     sample.gpuPowerWatts = -1.0;
     sample.gpuSRAMPowerWatts = 0.0;
     sample.anePowerWatts = -1.0;
+    sample.cpuPowerWatts = -1.0;
 
     if (![self initializeIfNeeded]) {
         return sample;
@@ -328,6 +329,9 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
                 }
                 sample.anePowerWatts += MAX(0.0, watts);
                 foundAnyMetric = YES;
+            } else if (strcmp(channel, "CPU Energy") == 0) {
+                sample.cpuPowerWatts = MAX(0.0, watts);
+                foundAnyMetric = YES;
             }
         } else if (strcmp(group, "PMP") == 0) {
             char subgroup[128] = {0};
@@ -349,6 +353,11 @@ static BOOL MMStringStartsWith(CFStringRef string, const char *prefix)
                 } else if (strncmp(channel, "GPU SRAM", 8) == 0) {
                     sample.gpuSRAMPowerWatts += MAX(0.0, watts);
                     foundAnyMetric = YES;
+                } else if (strcmp(channel, "CPU") == 0) {
+                    if (sample.cpuPowerWatts < 0.0) {
+                        sample.cpuPowerWatts = MAX(0.0, watts);
+                        foundAnyMetric = YES;
+                    }
                 }
             }
         } else if (strcmp(group, "GPU Stats") == 0) {
