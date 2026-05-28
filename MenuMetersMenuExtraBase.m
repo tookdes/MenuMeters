@@ -311,10 +311,10 @@
     if(!window){
         return NO;
     }
-    NSInteger windowID=window.windowNumber;
+    CGWindowID windowID=(CGWindowID)window.windowNumber;
     NSArray*onScreenWindows=CFBridgingRelease(CGWindowListCreate(kCGWindowListOptionOnScreenOnly, kCGNullWindowID));
     for(id x in onScreenWindows){
-        if(windowID==(NSInteger)x)
+        if(windowID==(CGWindowID)(uintptr_t)x)
             return NO;
     }
     return YES;

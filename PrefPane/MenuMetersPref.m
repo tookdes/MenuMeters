@@ -265,6 +265,8 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     NSRunningApplication*app=[[NSWorkspace sharedWorkspace] frontmostApplication];
     if([app.bundleIdentifier isEqualToString:[NSBundle mainBundle].bundleIdentifier])
         return;
+    if([app.bundleIdentifier isEqualToString:@"com.apple.loginwindow"])
+        return;
     NSArray*array=[[NSUserDefaults standardUserDefaults] objectForKey:@"hiddenArray"];
     if(!array){
         array=[NSArray array];
