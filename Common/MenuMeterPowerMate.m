@@ -67,6 +67,29 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 
 @implementation MenuMeterPowerMate
 
+- (void)cleanupIOKitResources {
+	if (deviceMatchedIterator) {
+		IOObjectRelease(deviceMatchedIterator);
+		deviceMatchedIterator = MACH_PORT_NULL;
+	}
+	if (deviceTerminatedIterator) {
+		IOObjectRelease(deviceTerminatedIterator);
+		deviceTerminatedIterator = MACH_PORT_NULL;
+	}
+	if (notifyRunSource) {
+		CFRunLoopRemoveSource(CFRunLoopGetCurrent(), notifyRunSource, kCFRunLoopDefaultMode);
+		notifyRunSource = NULL;
+	}
+	if (notifyPort) {
+		IONotificationPortDestroy(notifyPort);
+		notifyPort = NULL;
+	}
+	if (masterPort) {
+		mach_port_deallocate(mach_task_self(), masterPort);
+		masterPort = MACH_PORT_NULL;
+	}
+}
+
 + (BOOL)powermateAttached {
 
 	// Check for device
@@ -85,6 +108,13 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 	SInt32 vendorID = 0x077d, productID = 0x0410;
 	CFNumberRef vendorIDNum = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &vendorID);
 	CFNumberRef productIDNum = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &productID);
+	if (!vendorIDNum || !productIDNum) {
+		if (vendorIDNum) CFRelease(vendorIDNum);
+		if (productIDNum) CFRelease(productIDNum);
+		CFRelease(matchingDict);
+		mach_port_deallocate(mach_task_self(), localMasterPort);
+		return NO;
+	}
 	CFDictionarySetValue(matchingDict, CFSTR(kUSBVendorID), vendorIDNum);
 	CFDictionarySetValue(matchingDict, CFSTR(kUSBProductID), productIDNum);
 	CFRelease(vendorIDNum);
@@ -115,14 +145,17 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 	// Connect to IOKit and setup our notification source
 	kern_return_t err = IOMasterPort(MACH_PORT_NULL, &masterPort);
 	if ((err != KERN_SUCCESS) || !masterPort) {
+		[self cleanupIOKitResources];
 		return nil;
 	}
 	notifyPort = IONotificationPortCreate(masterPort);
 	if (!notifyPort) {
+		[self cleanupIOKitResources];
 		return nil;
 	}
 	notifyRunSource = IONotificationPortGetRunLoopSource(notifyPort);
 	if (!notifyRunSource) {
+		[self cleanupIOKitResources];
 		return nil;
 	}
 	CFRunLoopAddSource(CFRunLoopGetCurrent(), notifyRunSource, kCFRunLoopDefaultMode);
@@ -130,6 +163,7 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 	// Construct a matching dict
 	CFMutableDictionaryRef matchingDict = IOServiceMatching("IOUSBDevice");
 	if (!matchingDict) {
+		[self cleanupIOKitResources];
 		return nil;
 	}
 	// ID info here from Griffin sample code. Keep this pure CF so GC behavior
@@ -137,6 +171,13 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 	SInt32 vendorID = 0x077d, productID = 0x0410;
 	CFNumberRef vendorIDNum = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &vendorID);
 	CFNumberRef productIDNum = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &productID);
+	if (!vendorIDNum || !productIDNum) {
+		if (vendorIDNum) CFRelease(vendorIDNum);
+		if (productIDNum) CFRelease(productIDNum);
+		CFRelease(matchingDict);
+		[self cleanupIOKitResources];
+		return nil;
+	}
 	CFDictionarySetValue(matchingDict, CFSTR(kUSBVendorID), vendorIDNum);
 	CFDictionarySetValue(matchingDict, CFSTR(kUSBProductID), productIDNum);
 	CFRelease(vendorIDNum);
@@ -146,6 +187,7 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 	CFMutableDictionaryRef terminatedDict = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, matchingDict);
 	if (!terminatedDict) {
 		CFRelease(matchingDict);
+		[self cleanupIOKitResources];
 		return nil;
 	}
 
@@ -157,6 +199,7 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
                                            (__bridge void *)(self), &deviceMatchedIterator);
 	if (err != KERN_SUCCESS) {
         CFRelease(terminatedDict);
+		[self cleanupIOKitResources];
 
 		return nil;
 	}
@@ -165,8 +208,9 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
                                            kIOTerminatedNotification,
 										   terminatedDict,
 										   DeviceTerminated,
-                                           (__bridge void *)(self), &deviceTerminatedIterator);
+	                                           (__bridge void *)(self), &deviceTerminatedIterator);
 	if (err != KERN_SUCCESS) {
+		[self cleanupIOKitResources];
 		return nil;
 	}
 
@@ -183,13 +227,7 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 
 	[rampTimer invalidate];  // Runloop releases
 	if (deviceInterface) (*deviceInterface)->Release(deviceInterface);
-	if (deviceMatchedIterator) IOObjectRelease(deviceMatchedIterator);
-	if (deviceTerminatedIterator) IOObjectRelease(deviceTerminatedIterator);
-	if (notifyRunSource) {
-		CFRunLoopRemoveSource(CFRunLoopGetCurrent(), notifyRunSource, kCFRunLoopDefaultMode);
-	}
-	if (notifyPort) IONotificationPortDestroy(notifyPort);
-	if (masterPort) mach_port_deallocate(mach_task_self(), masterPort);
+	[self cleanupIOKitResources];
 
 } // dealloc
 

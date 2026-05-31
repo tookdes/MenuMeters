@@ -48,6 +48,7 @@
 	processor_set_name_port_t			processorSet;
 	// Previous processor tick data
 	processor_cpu_load_info_t 			priorCPUTicks;
+	natural_t							priorProcessorCount;
 	// Localized float display
 	NSNumberFormatter					*twoDigitFloatFormatter;
 

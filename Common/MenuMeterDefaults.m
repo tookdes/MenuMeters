@@ -798,11 +798,14 @@
 
 - (NSColor *)loadColorPref:(NSString *)prefName defaultValue:(NSColor *)defaultValue {
 
-    NSData* data = [[NSUserDefaults standardUserDefaults] objectForKey:prefName];
-    if(data){
-        NSColor*color=[NSUnarchiver unarchiveObjectWithData:data];
-        if(color){
-            return color;
+    id data = [[NSUserDefaults standardUserDefaults] objectForKey:prefName];
+    if([data isKindOfClass:[NSData class]]){
+        @try {
+            NSColor*color=[NSUnarchiver unarchiveObjectWithData:data];
+            if([color isKindOfClass:[NSColor class]]){
+                return color;
+            }
+        } @catch (NSException *exception) {
         }
 	}
     return defaultValue;
@@ -816,8 +819,8 @@
 
 - (NSString *)loadStringPref:(NSString *)prefName defaultValue:(NSString *)defaultValue {
 
-    NSString*s=[[NSUserDefaults standardUserDefaults] objectForKey:prefName];
-    if(s){
+    id s=[[NSUserDefaults standardUserDefaults] objectForKey:prefName];
+    if([s isKindOfClass:[NSString class]]){
         return s;
     }
     return defaultValue;

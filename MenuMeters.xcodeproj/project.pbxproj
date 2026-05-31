@@ -127,7 +127,6 @@
 		6349C13824BB733300C6FC99 /* Dark Color ArrowsRead.tiff in Resources */ = {isa = PBXBuildFile; fileRef = D42C6C951996DA77005F87BD /* Dark Color ArrowsRead.tiff */; };
 		6349C13924BB733300C6FC99 /* LightsWrite.tiff in Resources */ = {isa = PBXBuildFile; fileRef = D42EC98303D49BDE00A87BC9 /* LightsWrite.tiff */; };
 		6349C13A24BB733300C6FC99 /* MenuMetersPref.xib in Resources */ = {isa = PBXBuildFile; fileRef = 3384540A2105C3AA00D4DA92 /* MenuMetersPref.xib */; };
-		6349C13B24BB733300C6FC99 /* dsa_pub.pem in Resources */ = {isa = PBXBuildFile; fileRef = 330247662366CEA800F88D61 /* dsa_pub.pem */; };
 		6349C13C24BB733300C6FC99 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 33883D492365E61200B8AC14 /* Localizable.strings */; };
 		6349C13D24BB733300C6FC99 /* DiskImageSet.strings in Resources */ = {isa = PBXBuildFile; fileRef = D4E4BF8F04F333B100A87BC9 /* DiskImageSet.strings */; };
 		6349C13E24BB733300C6FC99 /* Dark Color ArrowsReadWrite.tiff in Resources */ = {isa = PBXBuildFile; fileRef = D42C6C961996DA77005F87BD /* Dark Color ArrowsReadWrite.tiff */; };
@@ -802,7 +801,6 @@
 				6349C13824BB733300C6FC99 /* Dark Color ArrowsRead.tiff in Resources */,
 				6349C13924BB733300C6FC99 /* LightsWrite.tiff in Resources */,
 				6349C13A24BB733300C6FC99 /* MenuMetersPref.xib in Resources */,
-				6349C13B24BB733300C6FC99 /* dsa_pub.pem in Resources */,
 				6349C13C24BB733300C6FC99 /* Localizable.strings in Resources */,
 				6349C13D24BB733300C6FC99 /* DiskImageSet.strings in Resources */,
 				33B440122594675E00CBBEDF /* com.ragingmenace.MenuMeters.plist in Resources */,

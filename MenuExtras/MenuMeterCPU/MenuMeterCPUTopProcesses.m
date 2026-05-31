@@ -70,6 +70,11 @@ NSString* const kProcessListItemCPUKey           = @"cpuPercent";
                                                object:nil];
     return self;
 }
+-(void)dealloc
+{
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [self stopUpdateProcessList];
+}
 -(void)taskOutput:(NSNotification*)n
 {
     NSFileHandle*fh=[n object];
@@ -79,6 +84,10 @@ NSString* const kProcessListItemCPUKey           = @"cpuPercent";
     NSData*d=[n userInfo][@"NSFileHandleNotificationDataItem"];
     if([d length]){
         NSString*s=[[NSString alloc] initWithData:d encoding:NSUTF8StringEncoding];
+        if(!s){
+            [fh readInBackgroundAndNotifyForModes:@[NSRunLoopCommonModes]];
+            return;
+        }
         buffer=[buffer  stringByAppendingString:s];
         while([buffer containsString:@"\n"]){
             NSUInteger i=[buffer rangeOfString:@"\n"].location;
@@ -91,6 +100,7 @@ NSString* const kProcessListItemCPUKey           = @"cpuPercent";
 }
     
 - (void)startUpdateProcessList {
+    [self stopUpdateProcessList];
     parseState=0;
     buffer=[NSString string];
     task = [NSTask new];
@@ -100,12 +110,21 @@ NSString* const kProcessListItemCPUKey           = @"cpuPercent";
     pipe = [NSPipe pipe];
     task.standardOutput = pipe;
     [[pipe fileHandleForReading] readInBackgroundAndNotifyForModes:@[NSRunLoopCommonModes]];
-    [task launch];
+    @try {
+        [task launch];
+    } @catch (NSException *exception) {
+        task = nil;
+        pipe = nil;
+        buffer = nil;
+    }
 } // startUpdateProcessList
-    
+
 - (void)stopUpdateProcessList {
-    [task terminate];
+    if(task.running){
+        [task terminate];
+    }
     task=nil;
+    pipe=nil;
     buffer=nil;
 } // stopUpdateProcessList
     
@@ -135,6 +154,9 @@ NSString* const kProcessListItemCPUKey           = @"cpuPercent";
         if(![i isEqualToString:@""]){
             [x addObject:i];
         }
+    }
+    if(x.count<5){
+        return;
     }
     NSArray*commandName=[x subarrayWithRange:NSMakeRange(4,x.count-4)];
     NSDictionary* entry = @{ kProcessListItemPIDKey:x[0],

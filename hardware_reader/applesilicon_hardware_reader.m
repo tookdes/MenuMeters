@@ -63,6 +63,9 @@ static void initEventSystem(void){
 NSArray*AppleSiliconTemperatureSensorNames(void)
 {
     initEventSystem();
+    if (!eventSystem) {
+        return @[];
+    }
     
     NSDictionary*thermalSensors=@{@"PrimaryUsagePage":@(0xff00),@"PrimaryUsage":@(5)};
 
@@ -75,8 +78,8 @@ NSArray*AppleSiliconTemperatureSensorNames(void)
     NSMutableArray*array=[NSMutableArray array];
     for (NSObject* scx in matchingsrvs) {
         IOHIDServiceClientRef sc = (__bridge IOHIDServiceClientRef)scx;
-        NSString* name = CFBridgingRelease(IOHIDServiceClientCopyProperty(sc, CFSTR("Product"))); // here we use ...CopyProperty
-        if (name) {
+        id name = CFBridgingRelease(IOHIDServiceClientCopyProperty(sc, CFSTR("Product"))); // here we use ...CopyProperty
+        if ([name isKindOfClass:[NSString class]]) {
             [array addObject:name];
         }
     }
@@ -88,6 +91,9 @@ NSArray*AppleSiliconTemperatureSensorNames(void)
 
 float AppleSiliconTemperatureForName(NSString *productName) {
     initEventSystem();
+    if (!eventSystem || !productName) {
+        return -273.15F;
+    }
 
 	NSDictionary *thermalSensors = @{@"PrimaryUsagePage": @(0xff00),
 									  @"PrimaryUsage": @(5),

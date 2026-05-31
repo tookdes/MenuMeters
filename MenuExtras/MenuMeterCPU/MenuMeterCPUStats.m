@@ -95,14 +95,16 @@ uint32_t packageCount;
 	}
 
 	// Gather the clock rate string
-    uint32_t clockRate = [self clockFrequency];
-    if (clockRate > 1000000000) {
-        clockSpeed = [NSString stringWithFormat:@"%@GHz",
-                            [twoDigitFloatFormatter stringForObjectValue:
-                                [NSNumber numberWithFloat:(float)clockRate / 1000000000]]];
-    } else {
-        clockSpeed = [NSString stringWithFormat:@"%dMHz", clockRate / 1000000];
-    }
+	uint32_t clockRate = [self clockFrequency];
+	if (clockRate > 1000000000) {
+		clockSpeed = [NSString stringWithFormat:@"%@GHz",
+							[twoDigitFloatFormatter stringForObjectValue:
+								[NSNumber numberWithFloat:(float)clockRate / 1000000000]]];
+	} else if (clockRate > 0) {
+		clockSpeed = [NSString stringWithFormat:@"%dMHz", clockRate / 1000000];
+	} else {
+		clockSpeed = @"";
+	}
     if (!clockSpeed) {
         return nil;
     }
@@ -140,6 +142,11 @@ uint32_t packageCount;
 		return nil;
 	}
 	priorCPUTicks = (processor_cpu_load_info_t) malloc(processorCount * sizeof(struct processor_cpu_load_info));
+	if (!priorCPUTicks) {
+		vm_deallocate(mach_task_self(), (vm_address_t)processorTickInfo, (vm_size_t)(processorInfoCount * sizeof(natural_t)));
+		return nil;
+	}
+	priorProcessorCount = processorCount;
 	for (natural_t i = 0; i < processorCount; i++) {
 		for (natural_t j = 0; j < CPU_STATE_MAX; j++) {
 			priorCPUTicks[i].cpu_ticks[j] = processorTickInfo[i].cpu_ticks[j];
@@ -155,6 +162,8 @@ uint32_t packageCount;
 - (void)dealloc {
 
 	if (priorCPUTicks) free(priorCPUTicks);
+	if (processorSet) mach_port_deallocate(mach_task_self(), processorSet);
+	if (machHost) mach_port_deallocate(mach_task_self(), machHost);
 
 } // dealloc
 
@@ -249,6 +258,28 @@ uint32_t packageCount;
 											(processor_info_array_t *)&processorTickInfo, &processorInfoCount);
 	if (err != KERN_SUCCESS) return nil;
 
+	if (processorCount != priorProcessorCount) {
+		if (priorCPUTicks) free(priorCPUTicks);
+		priorCPUTicks = (processor_cpu_load_info_t) malloc(processorCount * sizeof(struct processor_cpu_load_info));
+		if (!priorCPUTicks) {
+			priorProcessorCount = 0;
+			vm_deallocate(mach_task_self(), (vm_address_t)processorTickInfo, (vm_size_t)(processorInfoCount * sizeof(natural_t)));
+			return nil;
+		}
+		priorProcessorCount = processorCount;
+		for (natural_t i = 0; i < processorCount; i++) {
+			for (natural_t j = 0; j < CPU_STATE_MAX; j++) {
+				priorCPUTicks[i].cpu_ticks[j] = processorTickInfo[i].cpu_ticks[j];
+			}
+		}
+		vm_deallocate(mach_task_self(), (vm_address_t)processorTickInfo, (vm_size_t)(processorInfoCount * sizeof(natural_t)));
+		NSMutableArray *resetLoadInfo = [NSMutableArray array];
+		for (natural_t i = 0; i < processorCount; i++) {
+			[resetLoadInfo addObject:[[MenuMeterCPULoad alloc] init]];
+		}
+		return resetLoadInfo;
+	}
+
 	// We have valid info so build return array
 	NSMutableArray *loadInfo = [NSMutableArray array];
 	for (natural_t i = 0; i < processorCount; i++) {
@@ -265,7 +296,7 @@ uint32_t packageCount;
 		if (processorTickInfo[i].cpu_ticks[CPU_STATE_USER] >= priorCPUTicks[i].cpu_ticks[CPU_STATE_USER]) {
 			user = processorTickInfo[i].cpu_ticks[CPU_STATE_USER] - priorCPUTicks[i].cpu_ticks[CPU_STATE_USER];
 		} else {
-			user = processorTickInfo[i].cpu_ticks[CPU_STATE_USER] + (ULONG_MAX - priorCPUTicks[i].cpu_ticks[CPU_STATE_USER] + 1);
+			user = processorTickInfo[i].cpu_ticks[CPU_STATE_USER] + (UINT_MAX - priorCPUTicks[i].cpu_ticks[CPU_STATE_USER] + 1);
 		}
 		// Count nice as user (nice slot non-zero only on  OS versions prior to 10.4)
 		// Radar 5644966, duplicate 5555821. Apple says its intentional, so stop
@@ -273,12 +304,12 @@ uint32_t packageCount;
 		if (processorTickInfo[i].cpu_ticks[CPU_STATE_NICE] >= priorCPUTicks[i].cpu_ticks[CPU_STATE_NICE]) {
 			user += processorTickInfo[i].cpu_ticks[CPU_STATE_NICE] - priorCPUTicks[i].cpu_ticks[CPU_STATE_NICE];
 		} else {
-			user += processorTickInfo[i].cpu_ticks[CPU_STATE_NICE] + (ULONG_MAX - priorCPUTicks[i].cpu_ticks[CPU_STATE_NICE] + 1);
+			user += processorTickInfo[i].cpu_ticks[CPU_STATE_NICE] + (UINT_MAX - priorCPUTicks[i].cpu_ticks[CPU_STATE_NICE] + 1);
 		}
 		if (processorTickInfo[i].cpu_ticks[CPU_STATE_IDLE] >= priorCPUTicks[i].cpu_ticks[CPU_STATE_IDLE]) {
 			idle = processorTickInfo[i].cpu_ticks[CPU_STATE_IDLE] - priorCPUTicks[i].cpu_ticks[CPU_STATE_IDLE];
 		} else {
-			idle = processorTickInfo[i].cpu_ticks[CPU_STATE_IDLE] + (ULONG_MAX - priorCPUTicks[i].cpu_ticks[CPU_STATE_IDLE] + 1);
+			idle = processorTickInfo[i].cpu_ticks[CPU_STATE_IDLE] + (UINT_MAX - priorCPUTicks[i].cpu_ticks[CPU_STATE_IDLE] + 1);
 		}
 		total = system + user + idle;
 
@@ -403,20 +434,28 @@ uint32_t packageCount;
 - (UInt32) clockFrequency {
     uint32_t clockRate = 0;
 
-    // First try with sysctl
-    int mib[2] = { CTL_HW, HW_CPU_FREQ };
-    size_t sysctlLength = sizeof(clockRate);
-    int res = sysctl(mib, 2, &clockRate, &sysctlLength, NULL, 0);
+	// First try with sysctl
+	int mib[2] = { CTL_HW, HW_CPU_FREQ };
+	size_t sysctlLength = sizeof(clockRate);
+	int res = sysctl(mib, 2, &clockRate, &sysctlLength, NULL, 0);
+	if (res != 0) {
+		sysctlLength = sizeof(clockRate);
+		res = sysctlbyname("hw.cpufrequency_max", &clockRate, &sysctlLength, NULL, 0);
+	}
 
-    // Try using IOKit
-    if (res != 0) {
-        mach_port_t platformExpertDevice = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"));
-        CFTypeRef platformClockFrequency = IORegistryEntryCreateCFProperty(platformExpertDevice, CFSTR("clock-frequency"), kCFAllocatorDefault, 0);
-        if (CFGetTypeID(platformClockFrequency) == CFDataGetTypeID()) {
-            const CFDataRef platformClockFrequencyData = (const CFDataRef) platformClockFrequency;
-            const UInt8* clockFreqBytes = CFDataGetBytePtr(platformClockFrequencyData);
-            clockRate = CFSwapInt32BigToHost(*(UInt32*)(clockFreqBytes)) * 1000;
-        }
+	// Try using IOKit
+	if (res != 0) {
+		mach_port_t platformExpertDevice = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"));
+		CFTypeRef platformClockFrequency = IORegistryEntryCreateCFProperty(platformExpertDevice, CFSTR("clock-frequency"), kCFAllocatorDefault, 0);
+		if (platformClockFrequency && CFGetTypeID(platformClockFrequency) == CFDataGetTypeID()) {
+			const CFDataRef platformClockFrequencyData = (const CFDataRef) platformClockFrequency;
+			if (CFDataGetLength(platformClockFrequencyData) >= sizeof(UInt32)) {
+				const UInt8* clockFreqBytes = CFDataGetBytePtr(platformClockFrequencyData);
+				UInt32 rawClockRate = 0;
+				memcpy(&rawClockRate, clockFreqBytes, sizeof(rawClockRate));
+				clockRate = CFSwapInt32BigToHost(rawClockRate) * 1000;
+			}
+		}
         if(platformClockFrequency)
             CFRelease(platformClockFrequency);
         if(platformExpertDevice)

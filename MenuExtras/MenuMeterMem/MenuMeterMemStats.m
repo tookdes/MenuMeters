@@ -250,10 +250,10 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
 	// Update total
 	totalRAM = active + inactive + wired + free + compressed;
 
-  int memory_pressure_level;
-  size_t length = sizeof(int);
-  
-  sysctlbyname("kern.memorystatus_vm_pressure_level", &memory_pressure_level, &length, nil, 0);
+	  int memory_pressure_level = 0;
+	  size_t length = sizeof(int);
+
+	  sysctlbyname("kern.memorystatus_vm_pressure_level", &memory_pressure_level, &length, NULL, 0);
 
     int memory_pressure=[self memPressure];
   
@@ -280,8 +280,7 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
 				[NSNumber numberWithUnsignedLongLong:vmStats64.purgeable_count], @"purgeable_count",
 				[NSNumber numberWithUnsignedLongLong:vmStats64.speculative_count], @"speculative_count",
 				[NSNumber numberWithUnsignedLongLong:vmStats64.decompressions], @"decompressions",
-				[NSNumber numberWithUnsignedLongLong:vmStats64.compressions], @"compressions",
-				[NSNumber numberWithUnsignedLongLong:vmStats64.compressions], @"compressions",
+					[NSNumber numberWithUnsignedLongLong:vmStats64.compressions], @"compressions",
 				[NSNumber numberWithUnsignedLongLong:deltaPageIn], @"deltapageins",
 				[NSNumber numberWithUnsignedLongLong:deltaPageOut], @"deltapageouts",
         [NSNumber numberWithInt:memory_pressure], @"mempress",

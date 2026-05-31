@@ -36,6 +36,7 @@
 	<string>MenuMetersMainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+#ifdef SPARKLE
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUPublicDSAKeyFile</key>
@@ -44,5 +45,6 @@
 	<integer>36000</integer>
 	<key>SUSendProfileInfo</key>
 	<true/>
+#endif
 </dict>
 </plist>

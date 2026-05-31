@@ -41,8 +41,7 @@
 	// Establish or connection to the PPP data gatherer
 	pppGatherer = [MenuMeterNetPPP sharedPPP];
 	if (!pppGatherer) {
-		NSLog(@"MenuMeterNetStats unable to connect to PPP data gatherer. Abort.");
-		return nil;
+		NSLog(@"MenuMeterNetStats unable to connect to PPP data gatherer. PPP stats disabled.");
 	}
 
 	// Prefetch the data first time
@@ -99,9 +98,12 @@
 	uint8_t *currentData = sysctlBuffer;
 	uint8_t *currentDataEnd = sysctlBuffer + currentSize;
 	NSMutableDictionary	*newStats = [NSMutableDictionary dictionary];
-	while (currentData < currentDataEnd) {
+	while (currentData + sizeof(struct if_msghdr) <= currentDataEnd) {
 		// Expecting interface data
 		struct if_msghdr *ifmsg = (struct if_msghdr *)currentData;
+		if (ifmsg->ifm_msglen == 0 || currentData + ifmsg->ifm_msglen > currentDataEnd) {
+			break;
+		}
 		if (ifmsg->ifm_type != RTM_IFINFO) {
 			currentData += ifmsg->ifm_msglen;
 			continue;
@@ -113,6 +115,10 @@
 		}
 		// Only look at link layer items
 		struct sockaddr_dl *sdl = (struct sockaddr_dl *)(ifmsg + 1);
+		if ((uint8_t *)(sdl + 1) > currentData + ifmsg->ifm_msglen) {
+			currentData += ifmsg->ifm_msglen;
+			continue;
+		}
 		if (sdl->sdl_family != AF_LINK) {
 			currentData += ifmsg->ifm_msglen;
 			continue;
@@ -127,6 +133,10 @@
 		NSDictionary *oldStats = [lastData objectForKey:interfaceName];
 
 		if ([interfaceName hasPrefix:@"ppp"]) {
+			if (!pppGatherer) {
+				currentData += ifmsg->ifm_msglen;
+				continue;
+			}
 			// We handle PPP connections using data directly from ppp subsystem. On
 			// old systems this was required because the outbytes from sysctl was
 			// always zero.
@@ -198,28 +208,27 @@
 								 forKey:interfaceName];
 				}
 			}
-		} else {
-			// Not a PPP connection
-			if (oldStats && (ifmsg->ifm_flags & IFF_UP)) {
-				// Non-PPP data is sized at u_long, which means we need to deal
-				// with 32-bit and 64-bit differently
-				uint64_t lastTotalIn = [[oldStats objectForKey:@"totalin"] unsignedLongLongValue];
-				uint64_t lastTotalOut = [[oldStats objectForKey:@"totalout"] unsignedLongLongValue];
-				// New totals
-				uint64_t totalIn = 0, totalOut = 0;
-				// Values are always 32 bit and can overflow
-				uint32_t lastifIn = [[oldStats objectForKey:@"ifin"] unsignedIntValue];
-				uint32_t lastifOut = [[oldStats objectForKey:@"ifout"] unsignedIntValue];
-				if (lastifIn > ifmsg->ifm_data.ifi_ibytes) {
-					totalIn = lastTotalIn + ifmsg->ifm_data.ifi_ibytes + UINT_MAX - lastifIn + 1;
-				} else {
-					totalIn = lastTotalIn + (ifmsg->ifm_data.ifi_ibytes - lastifIn);
-				}
-				if (lastifOut > ifmsg->ifm_data.ifi_obytes) {
-					totalOut = lastTotalOut + ifmsg->ifm_data.ifi_obytes + UINT_MAX - lastifOut + 1;
-				} else {
-					totalOut = lastTotalOut + (ifmsg->ifm_data.ifi_obytes - lastifOut);
-				}
+			} else {
+				// Not a PPP connection
+				if (oldStats && (ifmsg->ifm_flags & IFF_UP)) {
+					uint64_t lastTotalIn = [[oldStats objectForKey:@"totalin"] unsignedLongLongValue];
+					uint64_t lastTotalOut = [[oldStats objectForKey:@"totalout"] unsignedLongLongValue];
+					// New totals
+					uint64_t totalIn = 0, totalOut = 0;
+					uint64_t ifIn = ifmsg->ifm_data.ifi_ibytes;
+					uint64_t ifOut = ifmsg->ifm_data.ifi_obytes;
+					uint64_t lastifIn = [[oldStats objectForKey:@"ifin"] unsignedLongLongValue];
+					uint64_t lastifOut = [[oldStats objectForKey:@"ifout"] unsignedLongLongValue];
+					if (lastifIn > ifIn) {
+						totalIn = lastTotalIn + ifIn;
+					} else {
+						totalIn = lastTotalIn + (ifIn - lastifIn);
+					}
+					if (lastifOut > ifOut) {
+						totalOut = lastTotalOut + ifOut;
+					} else {
+						totalOut = lastTotalOut + (ifOut - lastifOut);
+					}
 				// New deltas (64-bit overflow guard, full paranoia)
 				uint64_t deltaIn = (totalIn > lastTotalIn) ? (totalIn - lastTotalIn) : 0;
 				uint64_t deltaOut = (totalOut > lastTotalOut) ? (totalOut - lastTotalOut) : 0;
@@ -228,12 +237,12 @@
 				if (sampleInterval > 0) {
 					if (peak < (deltaIn / sampleInterval)) peak = deltaIn / sampleInterval;
 					if (peak < (deltaOut / sampleInterval)) peak = deltaOut / sampleInterval;
-				}
-				[newStats setObject:[NSDictionary dictionaryWithObjectsAndKeys:
-										[NSNumber numberWithUnsignedInt:ifmsg->ifm_data.ifi_ibytes],
-										@"ifin",
-										[NSNumber numberWithUnsignedInt:ifmsg->ifm_data.ifi_obytes],
-										@"ifout",
+					}
+					[newStats setObject:[NSDictionary dictionaryWithObjectsAndKeys:
+											[NSNumber numberWithUnsignedLongLong:ifIn],
+											@"ifin",
+											[NSNumber numberWithUnsignedLongLong:ifOut],
+											@"ifout",
 										[NSNumber numberWithUnsignedLongLong:deltaIn],
 										@"deltain",
 										[NSNumber numberWithUnsignedLongLong:deltaOut],
@@ -246,13 +255,13 @@
 										@"peak",
 										nil]
 							forKey:interfaceName];
-			} else {
-				[newStats setObject:[NSDictionary dictionaryWithObjectsAndKeys:
-										// Paranoia, is this where the neg numbers came from?
-										[NSNumber numberWithUnsignedInt:ifmsg->ifm_data.ifi_ibytes],
-										@"ifin",
-										[NSNumber numberWithUnsignedInt:ifmsg->ifm_data.ifi_obytes],
-										@"ifout",
+				} else {
+					[newStats setObject:[NSDictionary dictionaryWithObjectsAndKeys:
+											// Paranoia, is this where the neg numbers came from?
+											[NSNumber numberWithUnsignedLongLong:ifmsg->ifm_data.ifi_ibytes],
+											@"ifin",
+											[NSNumber numberWithUnsignedLongLong:ifmsg->ifm_data.ifi_obytes],
+											@"ifout",
 										[NSNumber numberWithUnsignedLongLong:ifmsg->ifm_data.ifi_ibytes],
 										@"totalin",
 										[NSNumber numberWithUnsignedLongLong:ifmsg->ifm_data.ifi_obytes],

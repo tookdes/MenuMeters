@@ -56,6 +56,33 @@ static void BlockDeviceChanged(void *ref, io_iterator_t iterator) {
 
 @implementation MenuMeterDiskIO
 
+- (void)cleanupIOKitResources {
+	if (blockDeviceIterator) {
+		IOObjectRelease(blockDeviceIterator);
+		blockDeviceIterator = MACH_PORT_NULL;
+	}
+	if (blockDevicePublishedIterator) {
+		IOObjectRelease(blockDevicePublishedIterator);
+		blockDevicePublishedIterator = MACH_PORT_NULL;
+	}
+	if (blockDeviceTerminatedIterator) {
+		IOObjectRelease(blockDeviceTerminatedIterator);
+		blockDeviceTerminatedIterator = MACH_PORT_NULL;
+	}
+	if (notifyRunSource) {
+		CFRunLoopRemoveSource(CFRunLoopGetCurrent(), notifyRunSource, kCFRunLoopDefaultMode);
+		notifyRunSource = NULL;
+	}
+	if (notifyPort) {
+		IONotificationPortDestroy(notifyPort);
+		notifyPort = NULL;
+	}
+	if (masterPort) {
+		mach_port_deallocate(mach_task_self(), masterPort);
+		masterPort = MACH_PORT_NULL;
+	}
+}
+
 - (id)init {
 
 	self = [super init];
@@ -66,14 +93,17 @@ static void BlockDeviceChanged(void *ref, io_iterator_t iterator) {
 	// Connect to IOKit and setup our notification source
 	kern_return_t err = IOMasterPort(MACH_PORT_NULL, &masterPort);
 	if ((err != KERN_SUCCESS) || !masterPort) {
+		[self cleanupIOKitResources];
 		return nil;
 	}
 	notifyPort = IONotificationPortCreate(masterPort);
 	if (!notifyPort) {
+		[self cleanupIOKitResources];
 		return nil;
 	}
 	notifyRunSource = IONotificationPortGetRunLoopSource(notifyPort);
 	if (!notifyRunSource) {
+		[self cleanupIOKitResources];
 		return nil;
 	}
 	CFRunLoopAddSource(CFRunLoopGetCurrent(), notifyRunSource, kCFRunLoopDefaultMode);
@@ -81,14 +111,16 @@ static void BlockDeviceChanged(void *ref, io_iterator_t iterator) {
 	// Install notifications for block storage devices
 	err = IOServiceAddMatchingNotification(notifyPort,  kIOPublishNotification,
 										   IOServiceMatching(kIOBlockStorageDriverClass),
-										   BlockDeviceChanged, (__bridge void *)(self), &blockDevicePublishedIterator);
+											   BlockDeviceChanged, (__bridge void *)(self), &blockDevicePublishedIterator);
 	if (err != KERN_SUCCESS) {
+		[self cleanupIOKitResources];
 		return nil;
 	}
 	err = IOServiceAddMatchingNotification(notifyPort, kIOTerminatedNotification,
 										   IOServiceMatching(kIOBlockStorageDriverClass),
-										   BlockDeviceChanged, (__bridge void *)(self), &blockDeviceTerminatedIterator);
+											   BlockDeviceChanged, (__bridge void *)(self), &blockDeviceTerminatedIterator);
 	if (err != KERN_SUCCESS) {
+		[self cleanupIOKitResources];
 		return nil;
 	}
 
@@ -105,14 +137,7 @@ static void BlockDeviceChanged(void *ref, io_iterator_t iterator) {
 
 - (void)dealloc {
 
-	if (blockDeviceIterator) IOObjectRelease(blockDeviceIterator);
-	if (blockDevicePublishedIterator) IOObjectRelease(blockDevicePublishedIterator);
-	if (blockDeviceTerminatedIterator) IOObjectRelease(blockDeviceTerminatedIterator);
-	if (notifyRunSource) {
-		CFRunLoopRemoveSource(CFRunLoopGetCurrent(), notifyRunSource, kCFRunLoopDefaultMode);
-	}
-	if (notifyPort) IONotificationPortDestroy(notifyPort);
-	if (masterPort) mach_port_deallocate(mach_task_self(), masterPort);
+	[self cleanupIOKitResources];
 
 } // dealloc
 

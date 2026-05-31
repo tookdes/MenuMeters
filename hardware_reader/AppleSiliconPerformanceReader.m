@@ -139,6 +139,11 @@ static BOOL MMChannelNameEquals(const char *channel, const char *name)
     return channel && name && strcmp(channel, name) == 0;
 }
 
+static BOOL MMIsType(CFTypeRef value, CFTypeID typeID)
+{
+    return value && CFGetTypeID(value) == typeID;
+}
+
 static BOOL MMIsCPUEnergyClusterChannel(const char *channel)
 {
     return MMChannelNameEquals(channel, "ECPU") || MMChannelNameEquals(channel, "PCPU");
@@ -192,7 +197,7 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
                     CFDictionaryGetKeysAndValues(properties, keys, values);
                     for (CFIndex i = 0; i < count; i++) {
                         CFStringRef key = (CFStringRef)keys[i];
-                        if (MMStringStartsWith(key, "voltage-states")) {
+                        if (MMIsType(key, CFStringGetTypeID()) && MMStringStartsWith(key, "voltage-states")) {
                             bestData = (CFDataRef)values[i];
                             break;
                         }
@@ -303,6 +308,8 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
     CFDictionaryRef currentSample = IOReportCreateSamples(subscription, channels, NULL);
     NSDate *currentDate = requestDate;
     if (!currentSample) {
+        cachedSample = sample;
+        cachedSampleDate = currentDate;
         return sample;
     }
 
@@ -312,7 +319,6 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
         }
         previousSample = currentSample;
         previousSampleDate = currentDate;
-        sample.available = YES;
         cachedSample = sample;
         cachedSampleDate = currentDate;
         return sample;
@@ -325,11 +331,13 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
     previousSampleDate = currentDate;
 
     if (!delta) {
+        cachedSample = sample;
+        cachedSampleDate = currentDate;
         return sample;
     }
 
     CFArrayRef reportChannels = CFDictionaryGetValue(delta, CFSTR("IOReportChannels"));
-    CFIndex count = reportChannels ? CFArrayGetCount(reportChannels) : 0;
+    CFIndex count = MMIsType(reportChannels, CFArrayGetTypeID()) ? CFArrayGetCount(reportChannels) : 0;
     BOOL foundAnyMetric = NO;
     BOOL hasModelCPUAggregate = NO;
     BOOL hasModelCPUCluster = NO;
@@ -352,7 +360,7 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
 
     for (CFIndex i = 0; i < count; i++) {
         CFDictionaryRef item = (CFDictionaryRef)CFArrayGetValueAtIndex(reportChannels, i);
-        if (!item) {
+        if (!MMIsType(item, CFDictionaryGetTypeID())) {
             continue;
         }
 

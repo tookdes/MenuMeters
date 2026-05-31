@@ -36,6 +36,21 @@
     NSTimer*timer;
 }
 
+#ifndef SPARKLE
+- (void)removeSparkleMenuItemsFromMenu:(NSMenu *)menu
+{
+    for (NSInteger index = menu.numberOfItems - 1; index >= 0; index--) {
+        NSMenuItem *item = [menu itemAtIndex:index];
+        if (item.submenu) {
+            [self removeSparkleMenuItemsFromMenu:item.submenu];
+        }
+        if (item.action == @selector(checkForUpdates:)) {
+            [menu removeItemAtIndex:index];
+        }
+    }
+}
+#endif
+
 -(IBAction)checkForUpdates:(id)sender
 {
 #ifdef SPARKLE
@@ -70,6 +85,9 @@
 #define WELCOME @"v2.0.8alert"
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     // Insert code here to initialize your application
+#ifndef SPARKLE
+    [self removeSparkleMenuItemsFromMenu:NSApp.mainMenu];
+#endif
     [NSColor setIgnoresAlpha:NO];
     if([self isRunningOnReadOnlyVolume]){
         [self alertConcerningAppTranslocation];

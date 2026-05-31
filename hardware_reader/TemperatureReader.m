@@ -18,14 +18,20 @@
     static dispatch_once_t once;
     static NSArray*sensorNames;
     dispatch_once(&once, ^{
-#if TARGET_CPU_X86_64
-    if (kIOReturnSuccess == SMCOpen()) {
-        UInt32 count;
-        NSMutableArray*a=[NSMutableArray array];
-        SMCReadKeysCount(&count);
-        for(int i=0;i<count;i++){
-            SMCKeyValue val;
-            SMCReadKeyAtIndex(i, &val);
+	#if TARGET_CPU_X86_64
+	    if (kIOReturnSuccess == SMCOpen()) {
+	        UInt32 count = 0;
+	        NSMutableArray*a=[NSMutableArray array];
+	        if (SMCReadKeysCount(&count) != kIOReturnSuccess) {
+	            SMCClose();
+	            sensorNames=a;
+	            return;
+	        }
+	        for(int i=0;i<count;i++){
+	            SMCKeyValue val = {};
+	            if (SMCReadKeyAtIndex(i, &val) != kIOReturnSuccess) {
+	                continue;
+	            }
             SMCCode key=val.key;
             char s[5]={key.code[3],key.code[2],key.code[1],key.code[0],0};
             NSString*name=[NSString stringWithUTF8String:s];
@@ -60,18 +66,22 @@
 #elif TARGET_CPU_ARM64
     @"SOC MTR Temp Sensor0";
 #endif
-    if(![self sensorNames])
-        return candidate;
-    if([[self sensorNames] containsObject:candidate])
-        return candidate;
-    for(NSString*sensor in [self sensorNames]){
-        if([sensor hasPrefix:@"TC"])
-            return sensor;
-    }
-    return [self sensorNames][0];
+	    if(![self sensorNames])
+	        return candidate;
+	    if([[self sensorNames] containsObject:candidate])
+	        return candidate;
+	    for(NSString*sensor in [self sensorNames]){
+	        if([sensor hasPrefix:@"TC"])
+	            return sensor;
+	    }
+	    if([[self sensorNames] count]==0)
+	        return candidate;
+	    return [self sensorNames][0];
 }
 +(NSString*)displayNameForSensor:(NSString*)name
 {
+    if(!name)
+        return @"";
 #if TARGET_CPU_X86_64
     static NSMutableDictionary*dict=nil;
     if(!dict){
@@ -88,16 +98,18 @@
             }
         }
     }
-    return dict[name];
+    return dict[name] ?: name;
 #elif TARGET_CPU_ARM64
     return name;
 #endif
 }
 +(float)temperatureOfSensorWithName:(NSString*)name
 {
-#if TARGET_CPU_X86_64
-    float_t celsius = -273.15F;
-    if (kIOReturnSuccess == SMCOpen()) {
+	#if TARGET_CPU_X86_64
+	    float_t celsius = -273.15F;
+	    if(!name)
+	        return celsius;
+	    if (kIOReturnSuccess == SMCOpen()) {
         SMCKeyValue value;
         //use harcoded value for a while
         //TODO: implement SMC tab to allow setup smc gauges in toolbar
@@ -112,5 +124,3 @@
 #endif
 }
 @end
-
-

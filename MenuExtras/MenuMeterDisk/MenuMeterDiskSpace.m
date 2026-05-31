@@ -31,7 +31,7 @@
 ///////////////////////////////////////////////////////////////
 
 @interface MenuMeterDiskSpace (PrivateMethods)
-- (NSString *)spaceString:(float)space;
+- (NSString *)spaceString:(double)space;
 @end
 
 
@@ -173,14 +173,14 @@ static NSComparisonResult SortDiskEntryByDeviceString(NSDictionary *a, NSDiction
 
 			// Store
 			[diskStats setObject:[NSString stringWithFormat:[localizedStrings objectForKey:kTotalSpaceFormat],
-									[self spaceString:((float)mountInfo[i].f_blocks * (float)mountInfo[i].f_bsize)]]
+										[self spaceString:((double)mountInfo[i].f_blocks * (double)mountInfo[i].f_bsize)]]
 						  forKey:@"total"];
 			[diskStats setObject:[NSString stringWithFormat:[localizedStrings objectForKey:kFreeSpaceFormat],
-									[self spaceString:((float)mountInfo[i].f_bavail * (float)mountInfo[i].f_bsize)]]
+										[self spaceString:((double)mountInfo[i].f_bavail * (double)mountInfo[i].f_bsize)]]
 						  forKey:@"free"];
 			[diskStats setObject:[NSString stringWithFormat:[localizedStrings objectForKey:kUsedSpaceFormat],
-									[self spaceString:(((float)mountInfo[i].f_blocks -
-														(float)mountInfo[i].f_bavail) * (float)mountInfo[i].f_bsize)]]
+										[self spaceString:(((double)mountInfo[i].f_blocks -
+															(double)mountInfo[i].f_bavail) * (double)mountInfo[i].f_bsize)]]
 						  forKey:@"used"];
 			// Store the data into the array
 			[diskSpaceDetails addObject:diskStats];
@@ -208,34 +208,34 @@ static NSComparisonResult SortDiskEntryByDeviceString(NSDictionary *a, NSDiction
 //
 ///////////////////////////////////////////////////////////////
 
-- (NSString *)spaceString:(float)space {
+- (NSString *)spaceString:(double)space {
 
 	if (useBaseTen) {
 		if (space > 1000000000) {
 			return [NSString stringWithFormat:@"%@%@",
-					[spaceFormatter stringForObjectValue:[NSNumber numberWithFloat:space / 1000000000]],
+						[spaceFormatter stringForObjectValue:[NSNumber numberWithDouble:space / 1000000000]],
 					[localizedStrings objectForKey:kGBLabel]];
 		} else if (space > 1000000) {
 			return [NSString stringWithFormat:@"%@%@",
-					[spaceFormatter stringForObjectValue:[NSNumber numberWithFloat:space / 1000000]],
+						[spaceFormatter stringForObjectValue:[NSNumber numberWithDouble:space / 1000000]],
 					[localizedStrings objectForKey:kMBLabel]];
 		} else {
 			return [NSString stringWithFormat:@"%@%@",
-					[spaceFormatter stringForObjectValue:[NSNumber numberWithFloat:space / 1000]],
+						[spaceFormatter stringForObjectValue:[NSNumber numberWithDouble:space / 1000]],
 					[localizedStrings objectForKey:kKBLabel]];
 		}
 	} else {
 		if (space > 1073741824) {
 			return [NSString stringWithFormat:@"%@%@",
-				[spaceFormatter stringForObjectValue:[NSNumber numberWithFloat:space / 1073741824]],
+					[spaceFormatter stringForObjectValue:[NSNumber numberWithDouble:space / 1073741824]],
 				[localizedStrings objectForKey:kGBLabel]];
 		} else if (space > 1048576) {
 			return [NSString stringWithFormat:@"%@%@",
-				[spaceFormatter stringForObjectValue:[NSNumber numberWithFloat:space / 1048576]],
+					[spaceFormatter stringForObjectValue:[NSNumber numberWithDouble:space / 1048576]],
 				[localizedStrings objectForKey:kMBLabel]];
 		} else {
 			return [NSString stringWithFormat:@"%@%@",
-				[spaceFormatter stringForObjectValue:[NSNumber numberWithFloat:space / 1024]],
+					[spaceFormatter stringForObjectValue:[NSNumber numberWithDouble:space / 1024]],
 				[localizedStrings objectForKey:kKBLabel]];
 		}
 	}

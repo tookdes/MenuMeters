@@ -70,8 +70,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	// Get the PPP data puller
 	pppGatherer = [MenuMeterNetPPP sharedPPP];
 	if (!pppGatherer) {
-		NSLog(@"MenuMeterNetConfig unable to establish pppconfd session.");
-		return nil;
+		NSLog(@"MenuMeterNetConfig unable to establish pppconfd session. PPP controls disabled.");
 	}
 
 	// Connect to SystemConfiguration
@@ -95,13 +94,17 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 															@"Setup:/Network/Global/IPv4",
 															@"State:/Network/Interface", nil],
 										   (CFArrayRef)[NSArray arrayWithObjects:
-														@"State:/Network/Interface.*", nil])) {
+													@"State:/Network/Interface.*", nil])) {
 		NSLog(@"MenuMeterNetConfig unable to install notification keys.");
+		CFRelease(scSession);
+		scSession = NULL;
 		return nil;
 	}
 	scRunSource = SCDynamicStoreCreateRunLoopSource(kCFAllocatorDefault, scSession, 0);
 	if (!scRunSource) {
 		NSLog(@"MenuMeterNetConfig unable to get notification keys run loop source.");
+		CFRelease(scSession);
+		scSession = NULL;
 		return nil;
 	}
 	CFRunLoopAddSource(CFRunLoopGetCurrent(), scRunSource, kCFRunLoopDefaultMode);
@@ -110,6 +113,11 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	kern_return_t err = IOMasterPort(MACH_PORT_NULL, &masterPort);
 	if ((err != KERN_SUCCESS) || !masterPort) {
 		NSLog(@"MenuMeterNetConfig unable to establish IOKit port.");
+		CFRunLoopRemoveSource(CFRunLoopGetCurrent(), scRunSource, kCFRunLoopDefaultMode);
+		CFRelease(scRunSource);
+		scRunSource = NULL;
+		CFRelease(scSession);
+		scSession = NULL;
 		return nil;
 	}
 
@@ -126,9 +134,12 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 
 - (void)dealloc {
 
-	CFRunLoopRemoveSource(CFRunLoopGetCurrent(), scRunSource, kCFRunLoopDefaultMode);
-	CFRelease(scSession);
-	mach_port_deallocate(mach_task_self(), masterPort);
+	if (scRunSource) {
+		CFRunLoopRemoveSource(CFRunLoopGetCurrent(), scRunSource, kCFRunLoopDefaultMode);
+		CFRelease(scRunSource);
+	}
+	if (scSession) CFRelease(scSession);
+	if (masterPort) mach_port_deallocate(mach_task_self(), masterPort);
 
 } // dealloc
 

@@ -21,6 +21,39 @@
 #define kAppleInterfaceThemeChangedNotification        @"AppleInterfaceThemeChangedNotification"
 
 @implementation MenuMetersMenuExtraBase
+- (void)dealloc
+{
+    [updateTimer invalidate];
+    [self removeStatusItemObservers];
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [[NSDistributedNotificationCenter defaultCenter] removeObserver:self];
+    @try {
+        [[NSUserDefaults standardUserDefaults] removeObserver:self forKeyPath:@"tintPercentage"];
+    } @catch (NSException *exception) {
+    }
+}
+
+- (void)removeStatusItemObservers
+{
+    if (!statusItem) {
+        return;
+    }
+#if (__MAC_OS_X_VERSION_MAX_ALLOWED >= 101200)
+    if(@available(macOS 10.12,*)){
+        @try {
+            [statusItem removeObserver:self forKeyPath:@"visible"];
+        } @catch (NSException *exception) {
+        }
+    }
+#endif
+    if (statusItem.button) {
+        @try {
+            [statusItem.button removeObserver:self forKeyPath:@"effectiveAppearance"];
+        } @catch (NSException *exception) {
+        }
+    }
+}
+
 -(NSColor*)colorByAdjustingForLightDark:(NSColor*)c
 {
     [self setupAppearance];
@@ -169,6 +202,7 @@
 -(void)removeStatusItem
 {
     [updateTimer invalidate];
+    [self removeStatusItemObservers];
     [[NSStatusBar systemStatusBar] removeStatusItem:statusItem];
     statusItem=nil;
     [[NSNotificationCenter defaultCenter] postNotification:[NSNotification notificationWithName:@"menuExtraUnloaded" object:self.bundleID]];
@@ -313,8 +347,8 @@
     }
     CGWindowID windowID=(CGWindowID)window.windowNumber;
     NSArray*onScreenWindows=CFBridgingRelease(CGWindowListCreate(kCGWindowListOptionOnScreenOnly, kCGNullWindowID));
-    for(id x in onScreenWindows){
-        if(windowID==(CGWindowID)(uintptr_t)x)
+    for(NSNumber*x in onScreenWindows){
+        if(windowID==(CGWindowID)[x unsignedIntValue])
             return NO;
     }
     return YES;

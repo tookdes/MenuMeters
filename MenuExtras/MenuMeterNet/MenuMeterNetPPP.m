@@ -135,19 +135,28 @@ static id gSharedPPP = nil;
 	if (!self) {
 		return nil;
 	}
+	pppconfdSocket = -1;
 
 	// Establish or connection to the PPP socket
 	pppconfdSocket = socket(AF_LOCAL, SOCK_STREAM, 0);
+	if (pppconfdSocket < 0) {
+		NSLog(@"MenuMeterNetPPP unable to establish socket for pppconfd. Abort.");
+		return nil;
+	}
 	struct sockaddr_un socketaddr = { 0, AF_LOCAL, kPPPSocketPath };
 	if (connect(pppconfdSocket, (struct sockaddr *)&socketaddr, (socklen_t)sizeof(socketaddr))) {
 		NSLog(@"MenuMeterNetPPP unable to establish socket for pppconfd. Abort.");
+		close(pppconfdSocket);
+		pppconfdSocket = -1;
 		return nil;
 	}
 
 	// Create the filehandle
-	pppconfdHandle = [[NSFileHandle alloc] initWithFileDescriptor:pppconfdSocket];
+	pppconfdHandle = [[NSFileHandle alloc] initWithFileDescriptor:pppconfdSocket closeOnDealloc:NO];
 	if (!pppconfdHandle) {
 		NSLog(@"MenuMeterNetPPP unable to establish file handle for pppconfd. Abort.");
+		close(pppconfdSocket);
+		pppconfdSocket = -1;
 		return nil;
 	}
 
@@ -158,7 +167,7 @@ static id gSharedPPP = nil;
 
 - (void)dealloc {
 
-	close(pppconfdSocket);
+	if (pppconfdSocket >= 0) close(pppconfdSocket);
 
 } // dealloc
 
@@ -169,9 +178,11 @@ static id gSharedPPP = nil;
 ///////////////////////////////////////////////////////////////
 
 - (NSDictionary *)statusForInterfaceName:(NSString *)ifname {
+	if (!ifname) return nil;
 
 	// Name in UTF-8
 	NSData *ifnameData = [ifname dataUsingEncoding:NSUTF8StringEncoding];
+	if (!ifnameData) return nil;
 #ifdef __LP64__
 	if ([ifnameData length] > UINT_MAX) return nil;
 #endif
@@ -213,9 +224,11 @@ static id gSharedPPP = nil;
 } // statusForInterfaceName
 
 - (NSDictionary *)statusForServiceID:(NSString *)serviceID; {
+	if (!serviceID) return nil;
 
 	// Service in UTF-8
 	NSData *serviceIDData = [serviceID dataUsingEncoding:NSUTF8StringEncoding];
+	if (!serviceIDData) return nil;
 #ifdef __LP64__
 	if ([serviceIDData length] > UINT_MAX) return nil;
 #endif
@@ -263,9 +276,11 @@ static id gSharedPPP = nil;
 ///////////////////////////////////////////////////////////////
 
 - (void)connectServiceID:(NSString *)serviceID {
+	if (!serviceID) return;
 
 	// Service in UTF-8
 	NSData *serviceIDData = [serviceID dataUsingEncoding:NSUTF8StringEncoding];
+	if (!serviceIDData) return;
 #ifdef __LP64__
 	if ([serviceIDData length] > UINT_MAX) return;
 #endif
@@ -286,9 +301,11 @@ static id gSharedPPP = nil;
 } // connectServiceID
 
 - (void)disconnectServiceID:(NSString *)serviceID {
+	if (!serviceID) return;
 
 	// Service in UTF-8
 	NSData *serviceIDData = [serviceID dataUsingEncoding:NSUTF8StringEncoding];
+	if (!serviceIDData) return;
 #ifdef __LP64__
 	if ([serviceIDData length] > UINT_MAX) return;
 #endif
@@ -331,19 +348,24 @@ static id gSharedPPP = nil;
 } // pppconfdLinkCount
 
 - (NSData *)pppconfdExecMessage:(NSData *)message {
+	if (!pppconfdHandle || !message) return nil;
 
 	// Write the data
-	[pppconfdHandle writeData:message];
-	// Read back the reply headers
-	NSData *header = [pppconfdHandle readDataOfLength:sizeof(struct ppp_msg_hdr)];
-	if ([header length]) {
-		struct ppp_msg_hdr *header_message = (struct ppp_msg_hdr *)[header bytes];
-		if (header_message && header_message->m_len) {
-			NSData *reply = [pppconfdHandle readDataOfLength:header_message->m_len];
-			if ([reply length] && !header_message->m_result) {
-				return reply;
+	@try {
+		[pppconfdHandle writeData:message];
+		// Read back the reply headers
+		NSData *header = [pppconfdHandle readDataOfLength:sizeof(struct ppp_msg_hdr)];
+		if ([header length] == sizeof(struct ppp_msg_hdr)) {
+			struct ppp_msg_hdr *header_message = (struct ppp_msg_hdr *)[header bytes];
+			if (header_message && header_message->m_len) {
+				NSData *reply = [pppconfdHandle readDataOfLength:header_message->m_len];
+				if ([reply length] == header_message->m_len && !header_message->m_result) {
+					return reply;
+				}
 			}
 		}
+	} @catch (NSException *exception) {
+		return nil;
 	}
 
 	// Get here we got nothing

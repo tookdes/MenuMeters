@@ -263,22 +263,25 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 -(void)hiddenBySystem:(NSNotification*)notification
 {
     NSRunningApplication*app=[[NSWorkspace sharedWorkspace] frontmostApplication];
-    if([app.bundleIdentifier isEqualToString:[NSBundle mainBundle].bundleIdentifier])
+    NSString*bundleIdentifier=app.bundleIdentifier;
+    if(!bundleIdentifier.length)
         return;
-    if([app.bundleIdentifier isEqualToString:@"com.apple.loginwindow"])
+    if([bundleIdentifier isEqualToString:[NSBundle mainBundle].bundleIdentifier])
+        return;
+    if([bundleIdentifier isEqualToString:@"com.apple.loginwindow"])
         return;
     NSArray*array=[[NSUserDefaults standardUserDefaults] objectForKey:@"hiddenArray"];
     if(!array){
         array=[NSArray array];
     }
-    if([array containsObject:app.bundleIdentifier]){
+    if([array containsObject:bundleIdentifier]){
         return;
     }
     if(!hiddenAlertIsShown && !(self.window.visible)){
         NSAlert*hiddenAlert=[[NSAlert alloc] init];
         hiddenAlert.alertStyle=NSAlertStyleCritical;
         hiddenAlert.messageText=@"MenuMeters is hidden due to lack of space";
-        NSString*frontAppName=app.localizedName;
+        NSString*frontAppName=app.localizedName ?: bundleIdentifier;
         hiddenAlert.informativeText=[NSString stringWithFormat:@"It might be hidden because %@ has a long list of menus, or your MacBook has a notch.\nTry reducing the number of CPU cores shown, etc.",frontAppName];
         [hiddenAlert addButtonWithTitle:NSLocalizedString(kOpenMenuMetersPref, kOpenMenuMetersPref)];
         [hiddenAlert addButtonWithTitle:[NSString stringWithFormat:@"Ignore this issue when the frontmost app is %@",frontAppName]];
@@ -288,7 +291,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
             [self.window makeKeyAndOrderFront:self];
         }else{
             NSMutableArray*m=[array mutableCopy];
-            [m addObject:app.bundleIdentifier];
+            [m addObject:bundleIdentifier];
             [[NSUserDefaults standardUserDefaults] setObject:m forKey:@"hiddenArray"];
         }
         hiddenAlertIsShown=NO;
@@ -630,7 +633,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 - (void)updateTemperatureSensors
 {
     NSArray*sensorNames=[TemperatureReader sensorNames];
-    if(!sensorNames){
+    if(!sensorNames || sensorNames.count==0){
         cpuTemperatureSensor.enabled=NO;
         return;
     }

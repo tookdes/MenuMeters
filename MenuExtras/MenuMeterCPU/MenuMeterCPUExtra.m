@@ -877,32 +877,42 @@
               returnUser:(double *)user
 {
 	NSArray *currentLoad = [loadHistory lastObject];
-    if(position!=-1){
-        currentLoad=[loadHistory objectAtIndex:position];
-    }
-	if (!currentLoad || ([currentLoad count] < processor)) {
-        *system = -1;
-        *user = -1;
-        return;
-    }
+	if(position!=-1){
+		if(position<0 || position>=[loadHistory count]){
+			*system = -1;
+			*user = -1;
+			return;
+		}
+		currentLoad=[loadHistory objectAtIndex:position];
+	}
+	if (!currentLoad || ([currentLoad count] <= processor)) {
+		*system = -1;
+		*user = -1;
+		return;
+	}
 
-    if (![ourPrefs cpuAvgAllProcs]){
-        MenuMeterCPULoad*load=currentLoad[processor];
-        *system = load.system;
-        *user = load.user;
-    }else{
-        double s=0,u=0;
-        int numberOfCPUs = [cpuInfo numberOfCPUs];
-        for (uint32_t cpuNum = 0; cpuNum < numberOfCPUs; cpuNum++) {
-                MenuMeterCPULoad *load = currentLoad[cpuNum];
-            s+=load.system;
-            u+=load.user;
-            }
-            s /= numberOfCPUs;
-            u /= numberOfCPUs;
-        *system=s;
-        *user=u;
-    }
+	if (![ourPrefs cpuAvgAllProcs]){
+		MenuMeterCPULoad*load=currentLoad[processor];
+		*system = load.system;
+		*user = load.user;
+	}else{
+		double s=0,u=0;
+		NSUInteger numberOfCPUs = MIN((NSUInteger)[cpuInfo numberOfCPUs], [currentLoad count]);
+		if(numberOfCPUs==0){
+			*system = -1;
+			*user = -1;
+			return;
+		}
+		for (uint32_t cpuNum = 0; cpuNum < numberOfCPUs; cpuNum++) {
+			MenuMeterCPULoad *load = currentLoad[cpuNum];
+			s+=load.system;
+			u+=load.user;
+		}
+		s /= numberOfCPUs;
+		u /= numberOfCPUs;
+		*system=s;
+		*user=u;
+	}
     // Sanity and limit
     if (*system < 0) *system = 0;
     if (*system > 1) *system = 1;
