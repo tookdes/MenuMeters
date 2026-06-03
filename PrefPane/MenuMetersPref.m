@@ -637,27 +637,53 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     NSView *diskView = diskMeterToggle.superview;
     if (!diskView) return;
 
-    // Add section title
-    CGFloat y = 340;
-    NSTextField *sectionLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(18, y + 24, 200, 17)];
-    sectionLabel.stringValue = @"Throughput Display";
-    sectionLabel.editable = NO;
-    sectionLabel.selectable = NO;
-    sectionLabel.bezeled = NO;
-    sectionLabel.drawsBackground = NO;
-    sectionLabel.textColor = [NSColor secondaryLabelColor];
-    sectionLabel.font = [NSFont systemFontOfSize:11 weight:NSFontWeightMedium];
-    [diskView addSubview:sectionLabel];
+    // Hide the old image set popup from XIB and replace with display mode popup
+    [diskImageSet setHidden:YES];
 
-    diskThroughputToggle = [self checkboxWithTitle:@"Show read/write speed"
-                                             frame:NSMakeRect(19, y, 280, 22)
-                                            action:@selector(diskPrefChange:)];
-    [diskView addSubview:diskThroughputToggle];
+    diskDisplayMode = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(273, 516, 262, 26) pullsDown:NO];
+    [diskDisplayMode removeAllItems];
+    [diskDisplayMode addItemWithTitle:@"Arrows"];
+    [diskDisplayMode addItemWithTitle:@"Throughput"];
+    [diskDisplayMode addItemWithTitle:@"Arrows and Throughput"];
+    [diskDisplayMode setTarget:self];
+    [diskDisplayMode setAction:@selector(diskPrefChange:)];
+    [diskView addSubview:diskDisplayMode];
 
-    y -= 30;
-    diskPhysicalDiskSelector = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(19, y, 400, 26) pullsDown:NO];
+    // Move existing select mode controls down to make room for throughput section
+    diskSelectMode.frame = NSMakeRect(284, 370, 241, 26);
+    for (NSView *sub in diskView.subviews) {
+        if ([sub isKindOfClass:[NSTextField class]]) {
+            NSTextField *tf = (NSTextField *)sub;
+            if ([tf.stringValue containsString:@"Option"] || [tf.stringValue containsString:@"Selecting"]) {
+                if (tf.frame.origin.y > 380) {
+                    tf.frame = NSMakeRect(tf.frame.origin.x, tf.frame.origin.y - 44, tf.frame.size.width, tf.frame.size.height);
+                }
+            }
+        }
+    }
+
+    // Throughput Display section
+    [self addSectionTitle:@"Throughput Display" toView:diskView y:310];
+
+    diskThroughputLabeling = [self checkboxWithTitle:@"Show throughput labels (R/W)"
+                                               frame:NSMakeRect(50, 280, 300, 22)
+                                              action:@selector(diskPrefChange:)];
+    [diskView addSubview:diskThroughputLabeling];
+
+    diskPhysicalDiskSelector = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(50, 250, 400, 26) pullsDown:NO];
     [diskPhysicalDiskSelector setAutoenablesItems:NO];
     [diskView addSubview:diskPhysicalDiskSelector];
+
+    // Colors section
+    [self addSectionTitle:@"Colors" toView:diskView y:200];
+
+    [diskView addSubview:[self labelWithTitle:@"Read" frame:NSMakeRect(130, 165, 80, 14)]];
+    diskReadColorWell = [self colorWellWithFrame:NSMakeRect(130, 130, 53, 30) action:@selector(diskPrefChange:)];
+    [diskView addSubview:diskReadColorWell];
+
+    [diskView addSubview:[self labelWithTitle:@"Write" frame:NSMakeRect(230, 165, 80, 14)]];
+    diskWriteColorWell = [self colorWellWithFrame:NSMakeRect(230, 130, 53, 30) action:@selector(diskPrefChange:)];
+    [diskView addSubview:diskWriteColorWell];
 }
 
 - (void)updateDiskPhysicalDiskSelector {
@@ -678,7 +704,15 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
         [item setToolTip:bsd];
         [item setState:[selected containsObject:bsd] ? NSOnState : NSOffState];
     }
-    [diskThroughputToggle setState:([ourPrefs diskDisplayMode] & kDiskDisplayThroughput) ? NSOnState : NSOffState];
+    [diskDisplayMode selectItemAtIndex:-1];
+    [diskDisplayMode selectItemAtIndex:[ourPrefs diskDisplayMode] - 1];
+    [diskThroughputLabeling setState:[ourPrefs diskThroughputLabel] ? NSOnState : NSOffState];
+    [diskReadColorWell setColor:[ourPrefs diskReadColor]];
+    [diskWriteColorWell setColor:[ourPrefs diskWriteColor]];
+
+    BOOL throughputEnabled = ([ourPrefs diskDisplayMode] & kDiskDisplayThroughput) ? YES : NO;
+    [diskThroughputLabeling setEnabled:throughputEnabled];
+    [diskPhysicalDiskSelector setEnabled:throughputEnabled];
 }
 
 - (void)updateTemperatureSensors
@@ -1185,15 +1219,14 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	[diskMeterToggle setState:([self isExtraWithBundleIDLoaded:kDiskMenuBundleID] ? NSOnState : NSOffState)];
 
 	// Save changes
-	if (sender == diskImageSet) {
-		[ourPrefs saveDiskImageset:(int)[diskImageSet indexOfSelectedItem]];
+	if (sender == diskDisplayMode) {
+		[ourPrefs saveDiskDisplayMode:(int)[diskDisplayMode indexOfSelectedItem] + 1];
 	} else if (sender == diskInterval) {
 		[ourPrefs saveDiskInterval:[diskInterval doubleValue]];
 	} else if (sender == diskSelectMode) {
 		[ourPrefs saveDiskSelectMode:(int)[diskSelectMode indexOfSelectedItem]];
-	} else if (sender == diskThroughputToggle) {
-		int mode = ([diskThroughputToggle state] == NSOnState) ? kDiskDisplayThroughput : kDiskDisplayArrows;
-		[ourPrefs saveDiskDisplayMode:mode];
+	} else if (sender == diskThroughputLabeling) {
+		[ourPrefs saveDiskThroughputLabel:([diskThroughputLabeling state] == NSOnState)];
 	} else if (sender == diskPhysicalDiskSelector) {
 		NSInteger idx = [diskPhysicalDiskSelector indexOfSelectedItem];
 		if (idx > 0) {
@@ -1207,16 +1240,19 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 			}
 			[ourPrefs saveDiskSelectedPhysicalDisks:selected];
 		}
+	} else if (sender == diskReadColorWell) {
+		[ourPrefs saveDiskReadColor:[diskReadColorWell color]];
+	} else if (sender == diskWriteColorWell) {
+		[ourPrefs saveDiskWriteColor:[diskWriteColorWell color]];
 	}
 
 	// Update controls
-	[diskImageSet selectItemAtIndex:-1]; // Work around multiselects. AppKit problem?
+	[diskImageSet selectItemAtIndex:-1];
 	[diskImageSet selectItemAtIndex:[ourPrefs diskImageset]];
 	[diskInterval setDoubleValue:[ourPrefs diskInterval]];
 	[diskIntervalDisplay takeDoubleValueFrom:diskInterval];
-	[diskSelectMode selectItemAtIndex:-1]; // Work around multiselects. AppKit problem?
+	[diskSelectMode selectItemAtIndex:-1];
 	[diskSelectMode selectItemAtIndex:[ourPrefs diskSelectMode]];
-	[diskThroughputToggle setState:([ourPrefs diskDisplayMode] & kDiskDisplayThroughput) ? NSOnState : NSOffState];
 	[self updateDiskPhysicalDiskSelector];
 
 	// Notify
