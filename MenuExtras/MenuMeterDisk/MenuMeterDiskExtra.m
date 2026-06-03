@@ -87,32 +87,34 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
 //
 ///////////////////////////////////////////////////////////////
 
-- (NSImage *)image {
-    int mode = [ourPrefs diskDisplayMode];
-    // In throughput-only mode, image is nil (renderImage handles everything)
-    if (!(mode & kDiskDisplayArrows)) return nil;
-
-    BOOL isDark = self.isDark;
-    switch (displayedActivity) {
-        case kDiskActivityIdle:
-            return isDark ? idleImageDark : idleImageLight;
-        case kDiskActivityRead:
-            return isDark ? readImageDark : readImageLight;
-        case kDiskActivityWrite:
-            return isDark ? writeImageDark : writeImageLight;
-        case kDiskActivityReadWrite:
-            return isDark ? readwriteImageDark : readwriteImageLight;
-        default:
-            return nil;
-    }
-}
-
 - (BOOL)renderImage {
+    [self setupAppearance];
     int mode = [ourPrefs diskDisplayMode];
+
+    if (mode & kDiskDisplayArrows) {
+        // Draw the arrow icon at x=0
+        NSImage *arrowIcon = nil;
+        BOOL isDark = self.isDark;
+        switch (displayedActivity) {
+            case kDiskActivityIdle:
+                arrowIcon = isDark ? idleImageDark : idleImageLight; break;
+            case kDiskActivityRead:
+                arrowIcon = isDark ? readImageDark : readImageLight; break;
+            case kDiskActivityWrite:
+                arrowIcon = isDark ? writeImageDark : writeImageLight; break;
+            case kDiskActivityReadWrite:
+                arrowIcon = isDark ? readwriteImageDark : readwriteImageLight; break;
+            default: break;
+        }
+        if (arrowIcon) {
+            CGFloat iconY = floor((self.imageHeight - arrowIcon.size.height) / 2.0);
+            [arrowIcon drawAtPoint:NSMakePoint(0, iconY) fromRect:NSZeroRect operation:NSCompositeSourceOver fraction:1.0];
+        }
+    }
     if (mode & kDiskDisplayThroughput) {
         [self renderThroughput];
     }
-    return (mode & kDiskDisplayThroughput) ? YES : (mode & kDiskDisplayArrows) ? NO : NO;
+    return YES;
 }
 
 - (void)updateMenuWidth {
