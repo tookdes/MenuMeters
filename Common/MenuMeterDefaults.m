@@ -446,6 +446,57 @@
 	[self saveIntPref:kDiskSelectModePref value:mode];
 } // saveDiskSelectMode
 
+- (int)diskDisplayMode {
+    return [self loadBitFlagPref:kDiskDisplayModePref
+                      validFlags:(kDiskDisplayArrows | kDiskDisplayThroughput)
+                    defaultValue:kDiskDisplayDefault];
+} // diskDisplayMode
+
+- (BOOL)diskThroughputLabel {
+    return [self loadBoolPref:kDiskThroughputLabelPref defaultValue:kDiskThroughputLabelDefault];
+} // diskThroughputLabel
+
+- (NSArray *)diskSelectedPhysicalDisks {
+    NSArray *disks = [[NSUserDefaults standardUserDefaults] arrayForKey:kDiskSelectedPhysicalDisksPref];
+    return disks ?: @[];
+} // diskSelectedPhysicalDisks
+
+- (NSColor *)diskReadColor {
+    return [self loadColorPref:kDiskReadColorPref defaultValue:kDiskReadColorDefault];
+} // diskReadColor
+
+- (NSColor *)diskWriteColor {
+    return [self loadColorPref:kDiskWriteColorPref defaultValue:kDiskWriteColorDefault];
+} // diskWriteColor
+
+- (NSColor *)diskInactiveColor {
+    return [self loadColorPref:kDiskInactiveColorPref defaultValue:kDiskInactiveColorDefault];
+} // diskInactiveColor
+
+- (void)saveDiskDisplayMode:(int)mode {
+    [self saveIntPref:kDiskDisplayModePref value:mode];
+} // saveDiskDisplayMode
+
+- (void)saveDiskThroughputLabel:(BOOL)label {
+    [self saveBoolPref:kDiskThroughputLabelPref value:label];
+} // saveDiskThroughputLabel
+
+- (void)saveDiskSelectedPhysicalDisks:(NSArray *)disks {
+    [[NSUserDefaults standardUserDefaults] setObject:disks forKey:kDiskSelectedPhysicalDisksPref];
+} // saveDiskSelectedPhysicalDisks
+
+- (void)saveDiskReadColor:(NSColor *)color {
+    [self saveColorPref:kDiskReadColorPref value:color];
+} // saveDiskReadColor
+
+- (void)saveDiskWriteColor:(NSColor *)color {
+    [self saveColorPref:kDiskWriteColorPref value:color];
+} // saveDiskWriteColor
+
+- (void)saveDiskInactiveColor:(NSColor *)color {
+    [self saveColorPref:kDiskInactiveColorPref value:color];
+} // saveDiskInactiveColor
+
 ///////////////////////////////////////////////////////////////
 //
 //	Mem menu prefs

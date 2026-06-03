@@ -55,6 +55,7 @@
 // GPU pane
 - (void)setupGPUPaneWithFormatter:(NSNumberFormatter *)intervalFormatter;
 - (void)setupCPUPageHardwareControls;
+- (void)setupDiskPane;
 - (void)notifyAllMenuExtrasOfLayoutChange;
 - (NSString *)toolbarImageNameForItemIdentifier:(NSString *)identifier;
 
@@ -415,6 +416,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	[netIntervalDisplay setFormatter:intervalFormatter];
     [self setupGPUPaneWithFormatter:intervalFormatter];
     [self setupCPUPageHardwareControls];
+    [self setupDiskPane];
 
 	// The scale menu used to have images but they have been long gone
     // when the app is moved outside of System Preferences
@@ -630,6 +632,46 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     [cpuView addSubview:cpuPaneANEPowerToggle];
 }
 
+
+- (void)setupDiskPane {
+    NSView *diskView = diskMeterToggle.superview;
+    if (!diskView) return;
+
+    // Find a good Y position below existing controls
+    CGFloat y = 200;
+
+    diskThroughputToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"Throughput"]
+                                             frame:NSMakeRect(19, y, 240, 22)
+                                            action:@selector(diskPrefChange:)];
+    [diskView addSubview:diskThroughputToggle];
+
+    y -= 30;
+    diskPhysicalDiskSelector = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(19, y, 400, 26) pullsDown:NO];
+    [diskPhysicalDiskSelector setAutoenablesItems:NO];
+    [diskView addSubview:diskPhysicalDiskSelector];
+}
+
+- (void)updateDiskPhysicalDiskSelector {
+    MenuMeterDiskIO *io = [[MenuMeterDiskIO alloc] init];
+    NSArray *disks = [io physicalDiskList];
+    NSArray *selected = [ourPrefs diskSelectedPhysicalDisks];
+    [diskPhysicalDiskSelector removeAllItems];
+    [diskPhysicalDiskSelector addItemWithTitle:@"All Internal Disks (default)"];
+    [[diskPhysicalDiskSelector lastItem] setToolTip:@"internal-default"];
+    for (NSDictionary *disk in disks) {
+        NSString *bsd = disk[@"bsdName"];
+        NSString *name = disk[@"displayName"];
+        BOOL isInternal = [disk[@"isInternal"] boolValue];
+        NSString *diskLabel = [NSString stringWithFormat:@"%@ (%@) %@",
+                           name, bsd, isInternal ? @"Internal" : @"External"];
+        [diskPhysicalDiskSelector addItemWithTitle:diskLabel];
+        NSMenuItem *item = [diskPhysicalDiskSelector lastItem];
+        [item setToolTip:bsd];
+        [item setState:[selected containsObject:bsd] ? NSOnState : NSOffState];
+    }
+    [diskThroughputToggle setState:([ourPrefs diskDisplayMode] & kDiskDisplayThroughput) ? NSOnState : NSOffState];
+}
+
 - (void)updateTemperatureSensors
 {
     NSArray*sensorNames=[TemperatureReader sensorNames];
@@ -698,6 +740,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 														selector:@selector(menuExtraUnloaded:)
 															name:@"menuExtraUnloaded"
 														  object:nil];
+[self updateDiskPhysicalDiskSelector];
 } // willSelect
 
 - (void)didUnselect {
@@ -1139,6 +1182,22 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 		[ourPrefs saveDiskInterval:[diskInterval doubleValue]];
 	} else if (sender == diskSelectMode) {
 		[ourPrefs saveDiskSelectMode:(int)[diskSelectMode indexOfSelectedItem]];
+	} else if (sender == diskThroughputToggle) {
+		int mode = ([diskThroughputToggle state] == NSOnState) ? kDiskDisplayThroughput : kDiskDisplayArrows;
+		[ourPrefs saveDiskDisplayMode:mode];
+	} else if (sender == diskPhysicalDiskSelector) {
+		NSInteger idx = [diskPhysicalDiskSelector indexOfSelectedItem];
+		if (idx > 0) {
+			NSString *bsd = [[diskPhysicalDiskSelector selectedItem] toolTip];
+			NSMutableArray *selected = [[ourPrefs diskSelectedPhysicalDisks] mutableCopy];
+			if (!selected) selected = [NSMutableArray array];
+			if ([selected containsObject:bsd]) {
+				[selected removeObject:bsd];
+			} else {
+				[selected addObject:bsd];
+			}
+			[ourPrefs saveDiskSelectedPhysicalDisks:selected];
+		}
 	}
 
 	// Update controls
@@ -1148,6 +1207,8 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	[diskIntervalDisplay takeDoubleValueFrom:diskInterval];
 	[diskSelectMode selectItemAtIndex:-1]; // Work around multiselects. AppKit problem?
 	[diskSelectMode selectItemAtIndex:[ourPrefs diskSelectMode]];
+	[diskThroughputToggle setState:([ourPrefs diskDisplayMode] & kDiskDisplayThroughput) ? NSOnState : NSOffState];
+	[self updateDiskPhysicalDiskSelector];
 
 	// Notify
 	if ([self isExtraWithBundleIDLoaded:kDiskMenuBundleID]) {

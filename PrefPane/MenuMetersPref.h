@@ -90,6 +90,8 @@ NSWindowController<NSWindowDelegate, NSToolbarDelegate, NSTabViewDelegate>
 	IBOutlet NSTextField			*diskIntervalDisplay;
 	IBOutlet NSSlider				*diskInterval;
 	IBOutlet NSPopUpButton			*diskSelectMode;
+	NSButton					*diskThroughputToggle;
+	NSPopUpButton				*diskPhysicalDiskSelector;
 	// Mem pane controls
 	IBOutlet NSButton				*memMeterToggle;
 	IBOutlet NSPopUpButton			*memDisplayMode;

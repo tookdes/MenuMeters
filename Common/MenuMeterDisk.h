@@ -41,9 +41,15 @@ typedef enum {
 ///////////////////////////////////////////////////////////////
 
 // Pref dictionary keys
+#define kDiskDisplayModePref			@"DiskDisplayMode"
 #define kDiskIntervalPref				@"DiskInterval"
 #define kDiskImageSetPref				@"DiskImageSet"
 #define kDiskSelectModePref				@"DiskSelectMode"
+#define kDiskThroughputLabelPref		@"DiskThroughputLabel"
+#define kDiskSelectedPhysicalDisksPref	@"DiskSelectedPhysicalDisks"
+#define kDiskReadColorPref				@"DiskReadColor"
+#define kDiskWriteColorPref				@"DiskWriteColor"
+#define kDiskInactiveColorPref			@"DiskInactiveColor"
 
 // Hidden pref keys
 #define kDiskSpaceForceBaseTwoPref		@"DiskSpaceForceBaseTwo"
@@ -52,6 +58,16 @@ typedef enum {
 #define kDiskUpdateIntervalMin			0.1f
 #define kDiskUpdateIntervalMax			5.0f
 #define kDiskUpdateIntervalDefault		0.3f
+
+// Display modes (bitmask)
+enum {
+	kDiskDisplayArrows					= 1,
+	kDiskDisplayThroughput				= 2,
+};
+#define kDiskDisplayDefault				kDiskDisplayThroughput
+
+// Throughput label
+#define kDiskThroughputLabelDefault		YES
 
 // Image sets
 #define kDiskImageSets					[NSArray arrayWithObjects: @"Color Arrows", @"Arrows", \
@@ -77,6 +93,12 @@ enum {
 // View width, also menubar disk icon image width/height
 #define kDiskViewWidth					16
 
+// Colors
+												// Green for reads
+#define kDiskReadColorDefault			[NSColor systemGreenColor]
+												// Red for writes
+#define kDiskWriteColorDefault			[NSColor systemRedColor]
+#define kDiskInactiveColorDefault		[NSColor secondaryLabelColor]
 
 
 
