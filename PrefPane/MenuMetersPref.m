@@ -642,9 +642,9 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 
     diskDisplayMode = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(273, 516, 262, 26) pullsDown:NO];
     [diskDisplayMode removeAllItems];
-    [diskDisplayMode addItemWithTitle:@"Arrows"];
-    [diskDisplayMode addItemWithTitle:@"Throughput"];
-    [diskDisplayMode addItemWithTitle:@"Arrows and Throughput"];
+    [diskDisplayMode addItemWithTitle:[self localizedPreferenceString:@"Arrows"]];
+    [diskDisplayMode addItemWithTitle:[self localizedPreferenceString:@"Throughput"]];
+    [diskDisplayMode addItemWithTitle:[self localizedPreferenceString:@"Arrows and Throughput"]];
     [diskDisplayMode setTarget:self];
     [diskDisplayMode setAction:@selector(diskPrefChange:)];
     [diskView addSubview:diskDisplayMode];
@@ -663,9 +663,9 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     }
 
     // Throughput Display section
-    [self addSectionTitle:@"Throughput Display" toView:diskView y:310];
+    [self addSectionTitle:[self localizedPreferenceString:@"Throughput Display"] toView:diskView y:310];
 
-    diskThroughputLabeling = [self checkboxWithTitle:@"Show throughput labels (R/W)"
+    diskThroughputLabeling = [self checkboxWithTitle:[self localizedPreferenceString:@"Show throughput labels (R/W)"]
                                                frame:NSMakeRect(50, 280, 300, 22)
                                               action:@selector(diskPrefChange:)];
     [diskView addSubview:diskThroughputLabeling];
@@ -675,13 +675,13 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     [diskView addSubview:diskPhysicalDiskSelector];
 
     // Colors section
-    [self addSectionTitle:@"Colors" toView:diskView y:200];
+    [self addSectionTitle:[self localizedPreferenceString:@"Colors"] toView:diskView y:200];
 
-    [diskView addSubview:[self labelWithTitle:@"Read" frame:NSMakeRect(130, 165, 80, 14)]];
+    [diskView addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Read"] frame:NSMakeRect(130, 165, 80, 14)]];
     diskReadColorWell = [self colorWellWithFrame:NSMakeRect(130, 130, 53, 30) action:@selector(diskPrefChange:)];
     [diskView addSubview:diskReadColorWell];
 
-    [diskView addSubview:[self labelWithTitle:@"Write" frame:NSMakeRect(230, 165, 80, 14)]];
+    [diskView addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Write"] frame:NSMakeRect(230, 165, 80, 14)]];
     diskWriteColorWell = [self colorWellWithFrame:NSMakeRect(230, 130, 53, 30) action:@selector(diskPrefChange:)];
     [diskView addSubview:diskWriteColorWell];
 }
@@ -691,7 +691,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     NSArray *disks = [io physicalDiskList];
     NSArray *selected = [ourPrefs diskSelectedPhysicalDisks];
     [diskPhysicalDiskSelector removeAllItems];
-    [diskPhysicalDiskSelector addItemWithTitle:@"All Internal Disks (default)"];
+    [diskPhysicalDiskSelector addItemWithTitle:[self localizedPreferenceString:@"All Internal Disks (default)"]];
     [[diskPhysicalDiskSelector lastItem] setToolTip:@"internal-default"];
     for (NSDictionary *disk in disks) {
         NSString *bsd = disk[@"bsdName"];

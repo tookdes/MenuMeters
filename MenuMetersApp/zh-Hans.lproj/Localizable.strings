@@ -11,6 +11,16 @@
 "GPU Power" = "GPU 功耗";
 "ANE Power" = "ANE 功耗";
 "CPU Power" = "CPU 功耗";
+// Disk pane
+"Arrows" = "箭头";
+"Throughput" = "吞吐量";
+"Arrows and Throughput" = "箭头和吞吐量";
+"Throughput Display" = "吞吐量显示";
+"Show throughput labels (R/W)" = "显示吞吐量标签 (读/写)";
+"All Internal Disks (default)" = "所有内置磁盘（默认）";
+"Read" = "读取";
+"Write" = "写入";
+
 "Timing and Width" = "时间和宽度";
 "Update interval (seconds):" = "更新间隔(秒)：";
 "Graph width:" = "曲线宽度：";
