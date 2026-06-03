@@ -125,17 +125,9 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
         width += kDiskViewWidth + 4;
     }
     if (mode & kDiskDisplayThroughput) {
-        // Estimate throughput text width: max of "R: 999.9 MB/s" and "W: 999.9 MB/s"
         NSDictionary *attrs = @{NSFontAttributeName: throughputFont};
-        NSAttributedString *sampleR = [[NSAttributedString alloc] initWithString:@"R: 999.9 MB/s" attributes:attrs];
-        NSAttributedString *sampleW = [[NSAttributedString alloc] initWithString:@"W: 999.9 MB/s" attributes:attrs];
-        CGFloat textWidth = MAX(ceil(sampleR.size.width), ceil(sampleW.size.width));
-        if ([ourPrefs diskThroughputLabel]) {
-            NSDictionary *labelAttrs = @{NSFontAttributeName: [NSFont systemFontOfSize:8.0f]};
-            NSAttributedString *rLabel = [[NSAttributedString alloc] initWithString:@"R:" attributes:labelAttrs];
-            width += ceil(rLabel.size.width) + 2;
-        }
-        width += textWidth;
+        NSAttributedString *sample = [[NSAttributedString alloc] initWithString:@"999.9 MB/s" attributes:attrs];
+        width += ceil(sample.size.width);
     }
     if (width < 18.0) width = 18.0;
     menuWidth = width;
@@ -189,19 +181,6 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
             NSFontAttributeName: throughputFont,
             NSForegroundColorAttributeName: writeColor
         }];
-
-    CGFloat labelOffset = 0;
-    if ([ourPrefs diskThroughputLabel]) {
-        if ([ourPrefs diskDisplayMode] & kDiskDisplayArrows) {
-            labelOffset += kDiskViewWidth + 4;
-        }
-        NSDictionary *labelAttrs = @{NSFontAttributeName: [NSFont systemFontOfSize:8.0f], NSForegroundColorAttributeName: readColor};
-        NSAttributedString *rLabel = [[NSAttributedString alloc] initWithString:@"R:" attributes:labelAttrs];
-        NSDictionary *wLabelAttrs = @{NSFontAttributeName: [NSFont systemFontOfSize:8.0f], NSForegroundColorAttributeName: writeColor};
-        NSAttributedString *wLabel = [[NSAttributedString alloc] initWithString:@"W:" attributes:wLabelAttrs];
-        [rLabel drawAtPoint:NSMakePoint(labelOffset, floorf(self.height / 2) - 2)];
-        [wLabel drawAtPoint:NSMakePoint(labelOffset, -1)];
-    }
 
     [renderRead drawAtPoint:NSMakePoint(ceil(menuWidth - renderRead.size.width), floor(self.imageHeight / 2) - 1)];
     [renderWrite drawAtPoint:NSMakePoint(ceil(menuWidth - renderWrite.size.width), -1)];
@@ -426,11 +405,11 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
 }
 
 - (void)configFromPrefs:(NSNotification *)notification {
-    [self setupColor:nil];
 
 #ifdef ELCAPITAN
     [super configDisplay:kDiskMenuBundleID fromPrefs:ourPrefs withTimerInterval:[ourPrefs diskInterval]];
 #endif
+    [self setupColor:nil];
 
     int mode = [ourPrefs diskDisplayMode];
 
