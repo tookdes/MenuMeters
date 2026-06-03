@@ -17,6 +17,7 @@
 - (void)openOrEjectVolume:(id)sender;
 - (void)configFromPrefs:(NSNotification *)notification;
 - (void)renderThroughput;
+- (void)updateMenuWidth;
 @end
 
 ///////////////////////////////////////////////////////////////
@@ -112,6 +113,30 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
         [self renderThroughput];
     }
     return (mode & kDiskDisplayThroughput) ? YES : (mode & kDiskDisplayArrows) ? NO : NO;
+}
+
+- (void)updateMenuWidth {
+    int mode = [ourPrefs diskDisplayMode];
+    CGFloat width = 0.0;
+
+    if (mode & kDiskDisplayArrows) {
+        width += kDiskViewWidth + 4;
+    }
+    if (mode & kDiskDisplayThroughput) {
+        // Estimate throughput text width: max of "R: 999.9 MB/s" and "W: 999.9 MB/s"
+        NSDictionary *attrs = @{NSFontAttributeName: throughputFont};
+        NSAttributedString *sampleR = [[NSAttributedString alloc] initWithString:@"R: 999.9 MB/s" attributes:attrs];
+        NSAttributedString *sampleW = [[NSAttributedString alloc] initWithString:@"W: 999.9 MB/s" attributes:attrs];
+        CGFloat textWidth = MAX(ceil(sampleR.size.width), ceil(sampleW.size.width));
+        if ([ourPrefs diskThroughputLabel]) {
+            NSDictionary *labelAttrs = @{NSFontAttributeName: [NSFont systemFontOfSize:8.0f]};
+            NSAttributedString *rLabel = [[NSAttributedString alloc] initWithString:@"R:" attributes:labelAttrs];
+            width += ceil(rLabel.size.width) + 2;
+        }
+        width += textWidth;
+    }
+    if (width < 18.0) width = 18.0;
+    menuWidth = width;
 }
 
 - (void)renderThroughput {
@@ -344,7 +369,7 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
     if (activity != displayedActivity) {
         displayedActivity = activity;
     }
-    // Speed samples are queried in renderThroughput, no extra work here
+    [self updateMenuWidth];
     [super timerFired:timer];
 }
 
@@ -496,6 +521,7 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
         }
     }
 
+    [self updateMenuWidth];
     [self updateStatusItemImage];
 }
 
