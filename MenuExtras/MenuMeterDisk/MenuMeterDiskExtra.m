@@ -426,11 +426,11 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
 }
 
 - (void)configFromPrefs:(NSNotification *)notification {
+    [self setupColor:nil];
+
 #ifdef ELCAPITAN
     [super configDisplay:kDiskMenuBundleID fromPrefs:ourPrefs withTimerInterval:[ourPrefs diskInterval]];
 #endif
-
-    [self setupColor:nil];
 
     int mode = [ourPrefs diskDisplayMode];
 
