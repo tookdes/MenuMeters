@@ -637,11 +637,20 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     NSView *diskView = diskMeterToggle.superview;
     if (!diskView) return;
 
-    // Find a good Y position below existing controls
-    CGFloat y = 200;
+    // Add section title
+    CGFloat y = 340;
+    NSTextField *sectionLabel = [[NSTextField alloc] initWithFrame:NSMakeRect(18, y + 24, 200, 17)];
+    sectionLabel.stringValue = @"Throughput Display";
+    sectionLabel.editable = NO;
+    sectionLabel.selectable = NO;
+    sectionLabel.bezeled = NO;
+    sectionLabel.drawsBackground = NO;
+    sectionLabel.textColor = [NSColor secondaryLabelColor];
+    sectionLabel.font = [NSFont systemFontOfSize:11 weight:NSFontWeightMedium];
+    [diskView addSubview:sectionLabel];
 
-    diskThroughputToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"Throughput"]
-                                             frame:NSMakeRect(19, y, 240, 22)
+    diskThroughputToggle = [self checkboxWithTitle:@"Show read/write speed"
+                                             frame:NSMakeRect(19, y, 280, 22)
                                             action:@selector(diskPrefChange:)];
     [diskView addSubview:diskThroughputToggle];
 

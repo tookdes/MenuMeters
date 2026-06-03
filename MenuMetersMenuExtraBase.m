@@ -341,15 +341,19 @@
 }
 -(BOOL)isInstalledButHiddenBySystem
 {
+    if(!statusItem) return NO;
     NSWindow*window=statusItem.button.window;
-    if(!window){
-        return NO;
-    }
+    if(!window) return NO;
     CGWindowID windowID=(CGWindowID)window.windowNumber;
-    NSArray*onScreenWindows=CFBridgingRelease(CGWindowListCreate(kCGWindowListOptionOnScreenOnly, kCGNullWindowID));
-    for(NSNumber*x in onScreenWindows){
-        if(windowID==(CGWindowID)[x unsignedIntValue])
+    CFArrayRef windowInfoList=CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly, kCGNullWindowID);
+    if(!windowInfoList) return NO;
+    NSArray*infoList=(__bridge_transfer NSArray*)windowInfoList;
+    for(NSDictionary*info in infoList){
+        if(![info isKindOfClass:[NSDictionary class]]) continue;
+        NSNumber*widNum=info[(NSString*)kCGWindowNumber];
+        if(widNum && [widNum isKindOfClass:[NSNumber class]] && [widNum unsignedIntValue]==windowID){
             return NO;
+        }
     }
     return YES;
 }
