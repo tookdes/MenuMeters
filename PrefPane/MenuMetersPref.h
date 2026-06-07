@@ -91,10 +91,7 @@ NSWindowController<NSWindowDelegate, NSToolbarDelegate, NSTabViewDelegate>
 	IBOutlet NSSlider				*diskInterval;
 	IBOutlet NSPopUpButton			*diskSelectMode;
 	NSPopUpButton				*diskDisplayMode;
-	NSButton					*diskThroughputLabeling;
 	NSPopUpButton				*diskPhysicalDiskSelector;
-	NSColorWell					*diskReadColorWell;
-	NSColorWell					*diskWriteColorWell;
 	// Mem pane controls
 	IBOutlet NSButton				*memMeterToggle;
 	IBOutlet NSPopUpButton			*memDisplayMode;

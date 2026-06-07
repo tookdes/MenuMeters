@@ -169,18 +169,12 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
     NSString *readStr = MMDiskSpeedString(totalRead);
     NSString *writeStr = MMDiskSpeedString(totalWrite);
 
-    NSAttributedString *renderRead = [[NSAttributedString alloc]
-        initWithString:readStr
-        attributes:@{
-            NSFontAttributeName: throughputFont,
-            NSForegroundColorAttributeName: readColor
-        }];
-    NSAttributedString *renderWrite = [[NSAttributedString alloc]
-        initWithString:writeStr
-        attributes:@{
-            NSFontAttributeName: throughputFont,
-            NSForegroundColorAttributeName: writeColor
-        }];
+    NSDictionary *attrs = @{
+        NSFontAttributeName: throughputFont,
+        NSForegroundColorAttributeName: fgMenuThemeColor
+    };
+    NSAttributedString *renderRead = [[NSAttributedString alloc] initWithString:readStr attributes:attrs];
+    NSAttributedString *renderWrite = [[NSAttributedString alloc] initWithString:writeStr attributes:attrs];
 
     [renderRead drawAtPoint:NSMakePoint(ceil(menuWidth - renderRead.size.width), floor(self.imageHeight / 2) - 1)];
     [renderWrite drawAtPoint:NSMakePoint(ceil(menuWidth - renderWrite.size.width), -1)];
@@ -399,9 +393,6 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
 
 - (void)setupColor:(NSNotification *)notification {
     fgMenuThemeColor = self.menuBarTextColor;
-    readColor = [self colorByAdjustingForLightDark:[ourPrefs diskReadColor]];
-    writeColor = [self colorByAdjustingForLightDark:[ourPrefs diskWriteColor]];
-    inactiveColor = [self colorByAdjustingForLightDark:[ourPrefs diskInactiveColor]];
 }
 
 - (void)configFromPrefs:(NSNotification *)notification {

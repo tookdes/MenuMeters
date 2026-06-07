@@ -582,7 +582,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
                                     action:@selector(gpuPrefChange:)];
     [view addSubview:menuBarPadding];
 
-    [self addSectionTitle:[self localizedPreferenceString:@"Colors"] toView:view y:210];
     [view addSubview:[self labelWithTitle:@"GPU" frame:NSMakeRect(70, 170, 85, 18)]];
     gpuColor = [self colorWellWithFrame:NSMakeRect(70, 132, 53, 30) action:@selector(gpuPrefChange:)];
     [view addSubview:gpuColor];
@@ -665,25 +664,13 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     // Throughput Display section
     [self addSectionTitle:[self localizedPreferenceString:@"Throughput Display"] toView:diskView y:310];
 
-    diskThroughputLabeling = [self checkboxWithTitle:[self localizedPreferenceString:@"Show throughput labels (R/W)"]
-                                               frame:NSMakeRect(50, 280, 300, 22)
-                                              action:@selector(diskPrefChange:)];
-    [diskView addSubview:diskThroughputLabeling];
 
-    diskPhysicalDiskSelector = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(50, 250, 400, 26) pullsDown:NO];
+    diskPhysicalDiskSelector = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(50, 280, 400, 26) pullsDown:NO];
     [diskPhysicalDiskSelector setAutoenablesItems:NO];
     [diskView addSubview:diskPhysicalDiskSelector];
 
-    // Colors section
-    [self addSectionTitle:[self localizedPreferenceString:@"Colors"] toView:diskView y:200];
 
-    [diskView addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Read"] frame:NSMakeRect(130, 165, 80, 14)]];
-    diskReadColorWell = [self colorWellWithFrame:NSMakeRect(130, 130, 53, 30) action:@selector(diskPrefChange:)];
-    [diskView addSubview:diskReadColorWell];
 
-    [diskView addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Write"] frame:NSMakeRect(230, 165, 80, 14)]];
-    diskWriteColorWell = [self colorWellWithFrame:NSMakeRect(230, 130, 53, 30) action:@selector(diskPrefChange:)];
-    [diskView addSubview:diskWriteColorWell];
 }
 
 - (void)updateDiskPhysicalDiskSelector {
@@ -706,12 +693,8 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     }
     [diskDisplayMode selectItemAtIndex:-1];
     [diskDisplayMode selectItemAtIndex:[ourPrefs diskDisplayMode] - 1];
-    [diskThroughputLabeling setState:[ourPrefs diskThroughputLabel] ? NSOnState : NSOffState];
-    [diskReadColorWell setColor:[ourPrefs diskReadColor]];
-    [diskWriteColorWell setColor:[ourPrefs diskWriteColor]];
 
     BOOL throughputEnabled = ([ourPrefs diskDisplayMode] & kDiskDisplayThroughput) ? YES : NO;
-    [diskThroughputLabeling setEnabled:throughputEnabled];
     [diskPhysicalDiskSelector setEnabled:throughputEnabled];
 }
 
@@ -1225,8 +1208,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 		[ourPrefs saveDiskInterval:[diskInterval doubleValue]];
 	} else if (sender == diskSelectMode) {
 		[ourPrefs saveDiskSelectMode:(int)[diskSelectMode indexOfSelectedItem]];
-	} else if (sender == diskThroughputLabeling) {
-		[ourPrefs saveDiskThroughputLabel:([diskThroughputLabeling state] == NSOnState)];
 	} else if (sender == diskPhysicalDiskSelector) {
 		NSInteger idx = [diskPhysicalDiskSelector indexOfSelectedItem];
 		if (idx > 0) {
@@ -1240,10 +1221,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 			}
 			[ourPrefs saveDiskSelectedPhysicalDisks:selected];
 		}
-	} else if (sender == diskReadColorWell) {
-		[ourPrefs saveDiskReadColor:[diskReadColorWell color]];
-	} else if (sender == diskWriteColorWell) {
-		[ourPrefs saveDiskWriteColor:[diskWriteColorWell color]];
 	}
 
 	// Update controls

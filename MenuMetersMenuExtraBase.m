@@ -38,14 +38,6 @@
     if (!statusItem) {
         return;
     }
-#if (__MAC_OS_X_VERSION_MAX_ALLOWED >= 101200)
-    if(@available(macOS 10.12,*)){
-        @try {
-            [statusItem removeObserver:self forKeyPath:@"visible"];
-        } @catch (NSException *exception) {
-        }
-    }
-#endif
     if (statusItem.button) {
         @try {
             [statusItem.button removeObserver:self forKeyPath:@"effectiveAppearance"];
@@ -179,7 +171,6 @@
 #if (__MAC_OS_X_VERSION_MAX_ALLOWED >= 101200)
             if(@available(macOS 10.12,*)){
                 statusItem.behavior=NSStatusItemBehaviorRemovalAllowed;
-                [statusItem addObserver:self forKeyPath:@"visible" options:NSKeyValueObservingOptionNew context:nil];
             }
 #endif
             statusItem.menu = self.menu;
@@ -217,13 +208,6 @@
         }
     }
 
-    if(@available(macOS 10.12,*)){
-        if(object==statusItem && [keyPath isEqualToString:@"visible"]){
-            if(!statusItem.visible){
-                [self removeStatusItem];
-            }
-        }
-    }
     if([keyPath isEqualToString:@"tintPercentage"]){
         [self setupColor:nil];
     }
@@ -339,9 +323,33 @@
     }
     return isDark;
 }
+static BOOL isMenuBarManagerRunning(void) {
+    static NSSet *bundleIDs = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        bundleIDs = [NSSet setWithArray:@[
+            @"com.dwarvesv.hiddenbar",          // Hidden Bar
+            @"com.surteesstudios.Bartender-5",  // Bartender 5
+            @"com.surteesstudios.Bartender4",   // Bartender 4
+            @"com.matthewpalmer.Vanilla",       // Vanilla
+            @"com.mortennn.Dozer",              // Dozer
+        ]];
+    });
+    for (NSString *bid in bundleIDs) {
+        if ([[NSRunningApplication runningApplicationsWithBundleIdentifier:bid] count] > 0) {
+            return YES;
+        }
+    }
+    return NO;
+}
+
 -(BOOL)isInstalledButHiddenBySystem
 {
     if(!statusItem) return NO;
+    // If a menu-bar manager (Hidden Bar, Bartender, etc.) is running,
+    // it may push our status item off-screen. That is expected behavior,
+    // not a system hiding issue, so skip the check entirely.
+    if(isMenuBarManagerRunning()) return NO;
     NSWindow*window=statusItem.button.window;
     if(!window) return NO;
     CGWindowID windowID=(CGWindowID)window.windowNumber;
