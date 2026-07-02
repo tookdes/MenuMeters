@@ -106,9 +106,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 
 @implementation MenuMetersPref
 {
-#ifdef SPARKLE
-    SUUpdater*updater;
-#endif
     NSButton *gpuMeterToggle;
     NSButton *gpuPercentageToggle;
     NSButton *gpuGraphToggle;
@@ -192,8 +189,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
         [self.window makeKeyAndOrderFront:self];
     }
-    [self setupSparkleUI];
-
 #if (__MAC_OS_X_VERSION_MAX_ALLOWED >= 101600)
 	if (@available(macOS 10.16, *)) {
 		NSToolbar *toolbar = [NSToolbar new];
@@ -299,25 +294,15 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     }
     
 }
-#ifdef SPARKLE
--(instancetype)initWithAboutFileName:(NSString*)about andUpdater:(SUUpdater*)updater_
-{
-    self=[super initWithWindowNibName:@"MenuMetersPref"];
-    updater=updater_;
-    [self initCommon:about];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(openPrefPane:) name:@"openPref" object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(hiddenBySystem:) name:@"hiddenBySystem" object:nil];
-    return self;
-}
-#else
 -(instancetype)initWithAboutFileName:(NSString*)about
 {
     self=[super initWithWindowNibName:@"MenuMetersPref"];
     [self initCommon:about];
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(openPrefPane:) name:@"openPref" object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(hiddenBySystem:) name:@"hiddenBySystem" object:nil];
     return self;
 }
-#endif
+
 -(NSView*)mainView{
     return self.window.contentView;
 }
@@ -329,59 +314,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     if(![self noMenuMeterLoaded]){
         [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
     }
-}
--(void)setupSparkleUI
-{
-    // This is hacky, but if we're a Sparkle build this sets up the updater UI bits,
-    // and if we're not, just hide them
-#ifdef SPARKLE
-    if(updater.automaticallyChecksForUpdates){
-        NSTimeInterval updateInterval=updater.updateCheckInterval;
-        if(updateInterval<3600*24+1){
-            [updateIntervalButton selectItemAtIndex:1];
-        }else if(updateInterval<7*3600*24+1){
-            [updateIntervalButton selectItemAtIndex:2];
-        }else if(updateInterval<30*3600*24+1){
-            [updateIntervalButton selectItemAtIndex:3];
-        }else{
-            [updateIntervalButton selectItemAtIndex:1];
-        }
-    }else{
-        [updateIntervalButton selectItemAtIndex:0];
-    }
-#else
-    sparkleUIContainer.hidden = YES;
-#endif
-}
--(IBAction)updateInterval:(id)sender
-{
-#ifdef SPARKLE
-    NSPopUpButton*button=sender;
-    NSInteger intervalInDays=1;
-    switch(button.indexOfSelectedItem){
-        case 0:
-            intervalInDays=-1;
-            break;
-        case 1:
-            intervalInDays=1;
-            break;
-        case 2:
-            intervalInDays=7;
-            break;
-        case 3:
-            intervalInDays=30;
-            break;
-        default:
-            intervalInDays=1;
-            break;
-    }
-    if(intervalInDays<=0){
-        [updater setAutomaticallyChecksForUpdates:NO];
-    }else{
-        [updater setAutomaticallyChecksForUpdates:YES];
-        [updater setUpdateCheckInterval:intervalInDays*3600*24];
-    }
-#endif
 }
 ///////////////////////////////////////////////////////////////
 //

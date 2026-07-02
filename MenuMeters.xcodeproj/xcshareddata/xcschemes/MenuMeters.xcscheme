@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "33883CEE23655C9900B8AC14"
+               BlueprintIdentifier = "6349C10724BB733300C6FC99"
                BuildableName = "MenuMeters.app"
-               BlueprintName = "MenuMeters"
+               BlueprintName = "MenuMeters No Sparkle"
                ReferencedContainer = "container:MenuMeters.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -44,9 +44,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "33883CEE23655C9900B8AC14"
+            BlueprintIdentifier = "6349C10724BB733300C6FC99"
             BuildableName = "MenuMeters.app"
-            BlueprintName = "MenuMeters"
+            BlueprintName = "MenuMeters No Sparkle"
             ReferencedContainer = "container:MenuMeters.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
@@ -61,9 +61,9 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "33883CEE23655C9900B8AC14"
+            BlueprintIdentifier = "6349C10724BB733300C6FC99"
             BuildableName = "MenuMeters.app"
-            BlueprintName = "MenuMeters"
+            BlueprintName = "MenuMeters No Sparkle"
             ReferencedContainer = "container:MenuMeters.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>

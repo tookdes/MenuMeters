@@ -372,9 +372,6 @@
 /* Class = "NSMenuItem"; title = "℃"; ObjectID = "Wgg-4C-Cbe"; */
 "Wgg-4C-Cbe.title" = "℃";
 
-/* Class = "NSButtonCell"; title = "Check for updates..."; ObjectID = "XYi-uP-QCD"; */
-"XYi-uP-QCD.title" = "Tarkasta päivitykset...";
-
 /* Class = "NSButtonCell"; title = "Display memory pressure"; ObjectID = "aOw-Lj-aWS"; */
 "aOw-Lj-aWS.title" = "Näytä muistin käyttö";
 

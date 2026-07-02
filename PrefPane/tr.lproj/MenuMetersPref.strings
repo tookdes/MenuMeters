@@ -356,20 +356,8 @@
 /* Class = "NSButtonCell"; title = "Show bits per second"; ObjectID = "K7W-5f-1U8"; */
 "K7W-5f-1U8.title" = "Bit/sn göster";
 
-/* Class = "NSMenuItem"; title = "Once per week"; ObjectID = "LmO-Ij-G7M"; */
-"LmO-Ij-G7M.title" = "Haftada bir";
-
-/* Class = "NSMenuItem"; title = "Once per month"; ObjectID = "PuG-eZ-jRm"; */
-"PuG-eZ-jRm.title" = "Ayda bir";
-
-/* Class = "NSMenuItem"; title = "Never"; ObjectID = "STJ-3R-khe"; */
-"STJ-3R-khe.title" = "Hiçbir zaman";
-
 /* Class = "NSMenuItem"; title = "℃"; ObjectID = "Wgg-4C-Cbe"; */
 "Wgg-4C-Cbe.title" = "℃";
-
-/* Class = "NSButtonCell"; title = "Check updates now"; ObjectID = "XYi-uP-QCD"; */
-"XYi-uP-QCD.title" = "Şimdi Denetle";
 
 /* Class = "NSButtonCell"; title = "Display memory pressure"; ObjectID = "aOw-Lj-aWS"; */
 "aOw-Lj-aWS.title" = "Bellek baskısını göster";
@@ -382,9 +370,6 @@
 
 /* Class = "NSTextFieldCell"; title = "Show:"; ObjectID = "k2d-Cg-pqL"; */
 "k2d-Cg-pqL.title" = "Göster:";
-
-/* Class = "NSMenuItem"; title = "Once per day"; ObjectID = "lh5-j8-SRe"; */
-"lh5-j8-SRe.title" = "Günde bir";
 
 /* Class = "NSTextFieldCell"; title = "Color tint:"; ObjectID = "mAZ-f2-5AJ"; */
 "mAZ-f2-5AJ.title" = "Renk Tonu:";
@@ -403,9 +388,6 @@
 
 /* Class = "NSButtonCell"; title = "Horizontal bar"; ObjectID = "spo-WT-wCm"; */
 "spo-WT-wCm.title" = "Yatay çubuk";
-
-/* Class = "NSTextFieldCell"; title = "Automatic update check interval:"; ObjectID = "tug-YR-k7T"; */
-"tug-YR-k7T.title" = "Güncellemeleri Denetleme Sıklığı:";
 
 /* Class = "NSMenuItem"; title = "all cores, including hyperthreaded ones"; ObjectID = "vbH-jV-tUr"; */
 "vbH-jV-tUr.title" = "tüm çekirdekler, hiper iş parçacıklılar dahil";

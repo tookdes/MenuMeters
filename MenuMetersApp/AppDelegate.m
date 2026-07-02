@@ -13,9 +13,6 @@
 #import "MenuMeterMemExtra.h"
 #import "MenuMeterNetExtra.h"
 #import "MenuMetersPref.h"
-#ifdef SPARKLE
-#import <Sparkle/Sparkle.h>
-#endif
 
 @interface AppDelegate ()
 
@@ -30,32 +27,6 @@
     MenuMeterNetExtra*netExtra;
     MenuMeterMemExtra*memExtra;
     MenuMetersPref*pref;
-#ifdef SPARKLE
-    SUUpdater*updater;
-#endif
-    NSTimer*timer;
-}
-
-#ifndef SPARKLE
-- (void)removeSparkleMenuItemsFromMenu:(NSMenu *)menu
-{
-    for (NSInteger index = menu.numberOfItems - 1; index >= 0; index--) {
-        NSMenuItem *item = [menu itemAtIndex:index];
-        if (item.submenu) {
-            [self removeSparkleMenuItemsFromMenu:item.submenu];
-        }
-        if (item.action == @selector(checkForUpdates:)) {
-            [menu removeItemAtIndex:index];
-        }
-    }
-}
-#endif
-
--(IBAction)checkForUpdates:(id)sender
-{
-#ifdef SPARKLE
-    [updater checkForUpdates:sender];
-#endif
 }
 
 -(void)killOlderInstances{
@@ -66,11 +37,7 @@
         }
         NSBundle*b=[NSBundle bundleWithURL:x.bundleURL];
         NSString*version=b.infoDictionary[@"CFBundleVersion"];
-#ifdef SPARKLE
-        NSComparisonResult r=[[SUStandardVersionComparator defaultComparator] compareVersion:version toVersion:thisVersion];
-#else
         NSComparisonResult r=[version compare:thisVersion options:NSNumericSearch];
-#endif
         NSLog(@"vers: running is %@, ours is %@, compare result was %ld", version, thisVersion, r);
         if(r!=NSOrderedDescending){
             NSLog(@"version %@ already running, which is equal or older than this binary %@. Going to kill it.",version,thisVersion);
@@ -85,21 +52,12 @@
 #define WELCOME @"v2.0.8alert"
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     // Insert code here to initialize your application
-#ifndef SPARKLE
-    [self removeSparkleMenuItemsFromMenu:NSApp.mainMenu];
-#endif
     [NSColor setIgnoresAlpha:NO];
     if([self isRunningOnReadOnlyVolume]){
         [self alertConcerningAppTranslocation];
     }
     [self killOlderInstances];
-#ifdef SPARKLE
-    updater=[SUUpdater sharedUpdater];
-    updater.feedURL=[NSURL URLWithString:@"https://member.ipmu.jp/yuji.tachikawa/MenuMetersElCapitan/MenuMeters-Update.xml"];
-    pref=[[MenuMetersPref alloc] initWithAboutFileName:WELCOME andUpdater:updater];
-#else
     pref=[[MenuMetersPref alloc] initWithAboutFileName:WELCOME];
-#endif
     NSString*key=[WELCOME stringByAppendingString:@"Presented"];
     if(![[NSUserDefaults standardUserDefaults] boolForKey:key]){
         [pref openAbout:WELCOME];
@@ -107,9 +65,8 @@
     }
     // init of extras were moved to the last step.
     // It is because init of extras can raise exceptions when I introduce bugs.
-    // If extras are init'ed first, neither the updater nor the pref pane is init'ed,
-    // which is even worse.
-    // When extras are inited last, at least the updater and the pref pane are live.
+    // If extras are init'ed first and raise, the preferences window is not live yet.
+    // When extras are inited last, at least the pref pane is available for troubleshooting.
     cpuExtra=[[MenuMeterCPUExtra alloc] init];
     gpuExtra=[[MenuMeterGPUExtra alloc] init];
     diskExtra=[[MenuMeterDiskExtra alloc] init];

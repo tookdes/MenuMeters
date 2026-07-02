@@ -363,26 +363,8 @@
 /* Class = "NSTabViewItem"; title = "Als Bits/Sek. anzeigen"; ObjectID = "FSw-QC-dn2"; */
 "FSw-QC-dn2.label" = "Über";
 
-/* Class = "NSButtonCell"; title = "Als Bits/Sek. anzeigen"; ObjectID = "XYi-uP-QCD"; */
-"XYi-uP-QCD.title" = "Nach Updates suchen";
-
 /* Class = "NSButton"; title = "Zeige CPU Temperatur"; ObjectID = "5r7-xY-4OH"; */
 "5r7-xY-4OH.title" = "Zeige CPU Temperatur";
-
-/* title = "Automatic update check interval:"; ObjectID = "tug-YR-k7T"; */
-"tug-YR-k7T.title" = "Automatische Updates: ";
-
-/* title = "Never"; ObjectID = "STJ-3R-khe"; */
-"STJ-3R-khe.title" = "Nie";
-
-/* title = "Once per day"; ObjectID = "lh5-j8-SRe"; */
-"lh5-j8-SRe.title" = "Täglich";
-
-/* title = "Once per week"; ObjectID = "LmO-Ij-G7M"; */
-"LmO-Ij-G7M.title" = "Wöchentlich";
-
-/* title = "Once per month"; ObjectID = "PuG-eZ-jRm"; */
-"PuG-eZ-jRm.title" = "Monatlich";
 
 /* title = "Show:"; ObjectID = "k2d-Cg-pqL"; */
 "k2d-Cg-pqL.title" = "Zeige:";

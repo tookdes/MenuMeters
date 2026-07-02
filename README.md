@@ -2,7 +2,14 @@
 
 This is a maintained personal fork of [yujitach/MenuMeters](https://github.com/yujitach/MenuMeters), built as a standalone macOS menu bar app.
 
-The current fork release is `2.1.6.5`. It keeps the original MenuMeters behavior, improves Chinese localization, and adds Apple Silicon GPU/ANE monitoring.
+The current fork release is `2.1.6.6`. It keeps the original MenuMeters behavior, improves Chinese localization, and adds Apple Silicon GPU/ANE monitoring.
+
+## What's New In 2.1.6.6
+
+- Removed Sparkle auto-update integration from the default `MenuMeters` scheme; local releases use ad-hoc signing.
+- Removed dead update-check UI from the app menu, dock menu, and preferences About tab while keeping color tint and Activity Monitor pane controls.
+- Fixed preferences registration for the `hiddenBySystem` alert when menu bar meters are hidden by macOS.
+- Aligned the `MenuMeters` Xcode scheme with the no-Sparkle target used for this fork.
 
 ## What's New In 2.1.6.5
 
@@ -34,9 +41,9 @@ These interfaces are not public API. They may change across macOS releases or Ap
 
 ## Installation
 
-Download the release zip, unzip it, and run `MenuMeters.app`.
+Download the release zip from GitHub Releases, unzip it, and run `MenuMeters.app`.
 
-The app is ad-hoc signed for local use. Depending on your Gatekeeper settings, macOS may require you to allow the app manually the first time it is opened.
+The app is ad-hoc signed for local use and is not distributed through the Mac App Store. Depending on your Gatekeeper settings, macOS may require you to allow the app manually the first time it is opened.
 
 ## Building
 
@@ -54,6 +61,8 @@ xcodebuild \
   CODE_SIGN_STYLE=Manual \
   DEVELOPMENT_TEAM=
 ```
+
+Default local builds use ad-hoc signing (`CODE_SIGN_IDENTITY=-`, empty `DEVELOPMENT_TEAM`).
 
 The local release packaging used for this fork places these generated files in the project root:
 

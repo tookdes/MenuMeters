@@ -381,18 +381,6 @@
 /* Class = "NSButtonCell"; title = "Show bits per second"; ObjectID = "K7W-5f-1U8"; */
 "K7W-5f-1U8.title" = "以 bit/s 显示";
 
-/* Class = "NSMenuItem"; title = "Once per week"; ObjectID = "LmO-Ij-G7M"; */
-"LmO-Ij-G7M.title" = "每周一次";
-
-/* Class = "NSMenuItem"; title = "Once per month"; ObjectID = "PuG-eZ-jRm"; */
-"PuG-eZ-jRm.title" = "每月一次";
-
-/* Class = "NSMenuItem"; title = "Never"; ObjectID = "STJ-3R-khe"; */
-"STJ-3R-khe.title" = "从不";
-
-/* Class = "NSButtonCell"; title = "Check updates now"; ObjectID = "XYi-uP-QCD"; */
-"XYi-uP-QCD.title" = "立即检查更新";
-
 /* Class = "NSButtonCell"; title = "Display memory pressure"; ObjectID = "aOw-Lj-aWS"; */
 "aOw-Lj-aWS.title" = "显示内存压力";
 
@@ -405,9 +393,6 @@
 /* Class = "NSTextFieldCell"; title = "Show:"; ObjectID = "k2d-Cg-pqL"; */
 "k2d-Cg-pqL.title" = "显示：";
 
-/* Class = "NSMenuItem"; title = "Once per day"; ObjectID = "lh5-j8-SRe"; */
-"lh5-j8-SRe.title" = "每天一次";
-
 /* Class = "NSTextFieldCell"; title = "Color tint:"; ObjectID = "mAZ-f2-5AJ"; */
 "mAZ-f2-5AJ.title" = "颜色色调：";
 
@@ -419,9 +404,6 @@
 
 /* Class = "NSTextFieldCell"; title = "Processes to show:"; ObjectID = "rhi-NX-C3L"; */
 "rhi-NX-C3L.title" = "显示进程数：";
-
-/* Class = "NSTextFieldCell"; title = "Automatic update check interval:"; ObjectID = "tug-YR-k7T"; */
-"tug-YR-k7T.title" = "自动检查更新间隔：";
 
 /* Class = "NSMenuItem"; title = "all cores, including hyperthreaded ones"; ObjectID = "vbH-jV-tUr"; */
 "vbH-jV-tUr.title" = "全部核心（含超线程）";
