@@ -110,12 +110,7 @@
 -(void)timerFired:(id)notused
 {
     [self updateStatusItemImage];
-    if(@available(macOS 12,*)){
-        if(self.isInstalledButHiddenBySystem){
-            [[NSNotificationCenter defaultCenter] postNotificationName:@"hiddenBySystem" object:nil];
-        }
-    }
-/*    NSImage*image=self.image;
+	/*    NSImage*image=self.image;
     NSImage*canvas=[NSImage imageWithSize:image.size flipped:NO drawingHandler:^BOOL(NSRect dstRect) {
         [[[NSColor systemGrayColor] colorWithAlphaComponent:.3] setFill];
         [NSBezierPath fillRect:(CGRect) {.size = image.size}];
@@ -323,47 +318,11 @@
     }
     return isDark;
 }
-static BOOL isMenuBarManagerRunning(void) {
-    static NSSet *bundleIDs = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        bundleIDs = [NSSet setWithArray:@[
-            @"com.dwarvesv.hiddenbar",          // Hidden Bar
-            @"com.surteesstudios.Bartender-5",  // Bartender 5
-            @"com.surteesstudios.Bartender4",   // Bartender 4
-            @"com.matthewpalmer.Vanilla",       // Vanilla
-            @"com.mortennn.Dozer",              // Dozer
-        ]];
-    });
-    for (NSString *bid in bundleIDs) {
-        if ([[NSRunningApplication runningApplicationsWithBundleIdentifier:bid] count] > 0) {
-            return YES;
-        }
-    }
-    return NO;
-}
-
 -(BOOL)isInstalledButHiddenBySystem
 {
-    if(!statusItem) return NO;
-    // If a menu-bar manager (Hidden Bar, Bartender, etc.) is running,
-    // it may push our status item off-screen. That is expected behavior,
-    // not a system hiding issue, so skip the check entirely.
-    if(isMenuBarManagerRunning()) return NO;
-    NSWindow*window=statusItem.button.window;
-    if(!window) return NO;
-    CGWindowID windowID=(CGWindowID)window.windowNumber;
-    CFArrayRef windowInfoList=CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly, kCGNullWindowID);
-    if(!windowInfoList) return NO;
-    NSArray*infoList=(__bridge_transfer NSArray*)windowInfoList;
-    for(NSDictionary*info in infoList){
-        if(![info isKindOfClass:[NSDictionary class]]) continue;
-        NSNumber*widNum=info[(NSString*)kCGWindowNumber];
-        if(widNum && [widNum isKindOfClass:[NSNumber class]] && [widNum unsignedIntValue]==windowID){
-            return NO;
-        }
-    }
-    return YES;
+    // ponytail: this heuristic has repeatedly false-positive'd across menu bar
+    // managers and macOS menu layouts; keep the API but disable the alert path.
+    return NO;
 }
 -(NSColor*)menuBarTextColor
 {

@@ -246,9 +246,29 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
 	uint64_t free = vmStats64.free_count * vm_page_size;
 	uint64_t compressed = vmStats64.compressor_page_count * vm_page_size;
 	uint64_t uncompressed = vmStats64.total_uncompressed_pages_in_compressor * vm_page_size;
+	uint64_t purgeable = (uint64_t)vmStats64.purgeable_count * vm_page_size;
+	uint64_t speculative = (uint64_t)vmStats64.speculative_count * vm_page_size;
+	uint64_t fileBacked = (uint64_t)vmStats64.external_page_count * vm_page_size;
+	uint64_t anonymous = (uint64_t)vmStats64.internal_page_count * vm_page_size;
 
-	// Update total
-	totalRAM = active + inactive + wired + free + compressed;
+	// Align with Activity Monitor / MacOS-TSKMGR:
+	// app ≈ anonymous − purgeable; used ≈ app + wired + compressed;
+	// free display ≈ free + speculative + file-backed + purgeable (reclaimable cache).
+	uint64_t appMemory = (anonymous > purgeable) ? (anonymous - purgeable) : anonymous;
+	uint64_t cached = fileBacked + purgeable;
+	uint64_t usedAM = appMemory + wired + compressed;
+	uint64_t freeAM = free + speculative + cached;
+
+	// Prefer physical memory for total (stable). Fall back to sum of buckets.
+	uint64_t physical = 0;
+	size_t physicalLen = sizeof(physical);
+	if (sysctlbyname("hw.memsize", &physical, &physicalLen, NULL, 0) != 0 || physical == 0) {
+		physical = active + inactive + wired + free + compressed;
+	}
+	if (usedAM > physical) {
+		usedAM = physical;
+	}
+	totalRAM = physical;
 
 	  int memory_pressure_level = 0;
 	  size_t length = sizeof(int);
@@ -259,17 +279,18 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
   
 	return [NSDictionary dictionaryWithObjectsAndKeys:
 				[NSNumber numberWithDouble:(double)totalRAM / 1048576], @"totalmb",
-				// See discussion in 32 bit code for historical difference between free/used.
-				// By that standard compressed pages are probably active (OS compressing
-				// rather than purging).
-				[NSNumber numberWithDouble:(double)(free + inactive) / 1048576], @"freemb",
-				[NSNumber numberWithDouble:(double)(active + wired  + compressed) / 1048576], @"usedmb",
+				// freemb/usedmb now follow Activity Monitor style (see MacOS-TSKMGR refreshMemory).
+				// Legacy active/inactive breakdown fields are retained for menu detail rows.
+				[NSNumber numberWithDouble:(double)freeAM / 1048576], @"freemb",
+				[NSNumber numberWithDouble:(double)usedAM / 1048576], @"usedmb",
 				[NSNumber numberWithDouble:(double)active / 1048576], @"activemb",
 				[NSNumber numberWithDouble:(double)inactive / 1048576], @"inactivemb",
 				[NSNumber numberWithDouble:(double)wired / 1048576], @"wiremb",
 				[NSNumber numberWithDouble:(double)free / 1048576], @"freepagemb",
 				[NSNumber numberWithDouble:(double)compressed / 1048576], @"compressedmb",
 				[NSNumber numberWithDouble:(double)uncompressed / 1048576], @"uncompressedmb",
+				[NSNumber numberWithDouble:(double)appMemory / 1048576], @"appmb",
+				[NSNumber numberWithDouble:(double)cached / 1048576], @"cachedmb",
 				[NSNumber numberWithUnsignedLongLong:vmStats64.hits], @"hits",
 				[NSNumber numberWithUnsignedLongLong:vmStats64.lookups], @"lookups",
 				[NSNumber numberWithUnsignedLongLong:vmStats64.pageins], @"pageins",
