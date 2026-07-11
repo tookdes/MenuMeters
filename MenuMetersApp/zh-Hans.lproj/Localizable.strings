@@ -27,6 +27,8 @@
 "Menu bar horizontal padding:" = "菜单栏水平留白：";
 "Colors" = "颜色";
 "Text" = "文本";
+"Please move MenuMeters to Applications" = "请将 MenuMeters 移到“应用程序”文件夹";
+"MenuMeters cannot reliably launch at login from a read-only volume. Move it to /Applications, then open it again." = "MenuMeters 无法从只读卷可靠地登录启动。请将它移到 /Applications，然后重新打开。";
 //	In the interest of improving localizability most strings in MenuMeters
 //	are exposed as NSString format strings, including the %1$, %2$ parameter placement
 //	convention. If localization requires different ordering of the parameters you
@@ -251,3 +253,7 @@
 
 // Miscellaneous error strings
 "No Active Interfaces" = "无激活接口";
+"Internal" = "内置";
+"External" = "外置";
+"Using this feature for the first time will bring up two alerts by the system" = "首次使用此功能时，系统会显示两条提醒";
+"This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accessibility features." = "此功能使用 AppleScript 和“系统事件”模拟点击，以切换到“活动监视器”的特定面板。为此需要：1. 确认允许 MenuMeters 使用 AppleScript；2. 前往“系统设置”的“隐私与安全性”，允许 MenuMeters 使用“辅助功能”。";

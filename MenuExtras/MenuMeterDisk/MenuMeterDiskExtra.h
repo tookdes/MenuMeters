@@ -28,7 +28,6 @@
     NSImage                         *idleImageDark, *readImageDark, *writeImageDark, *readwriteImageDark;
 	DiskIOActivityType				displayedActivity;
 	// Throughput display
-	NSColor							*readColor, *writeColor, *inactiveColor;
 	NSFont							*throughputFont;
 	// Theme support
 	NSColor							*fgMenuThemeColor;

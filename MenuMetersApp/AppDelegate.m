@@ -103,9 +103,9 @@
 
 -(void)alertConcerningAppTranslocation{
     NSAlert*alert=[[NSAlert alloc] init];
-    alert.messageText=@"Please move the app after downloading it";
-    [alert addButtonWithTitle:@"OK, I quit the app and move it"];
-    alert.informativeText=@"Please move the app to, say, /Applications, using your mouse/trackpad, not from the command line. \n\nApple decided that they don't allow the app to auto-update otherwise. \n\nI am sorry for the inconvenience.";
+    alert.messageText=NSLocalizedString(@"Please move MenuMeters to Applications", nil);
+    [alert addButtonWithTitle:NSLocalizedString(@"Quit MenuMeters", nil)];
+    alert.informativeText=NSLocalizedString(@"MenuMeters cannot reliably launch at login from a read-only volume. Move it to /Applications, then open it again.", nil);
     [alert runModal];
     [NSApp terminate:nil];
 }

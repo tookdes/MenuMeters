@@ -61,7 +61,6 @@
 - (NSString *)trafficStringForNumber:(NSNumber *)throughputNumber withLabel:(NSString *)directionLabel;
 - (NSUInteger)scaleDown:(double *)num usingBase:(NSUInteger)base withLimit:(NSUInteger)limit;
 - (NSString *)stringifyNumber:(double)num withUnitLabel:(NSString *)label andFormat:(NSString *)format;
-- (NSString *)throughputStringForBytes:(NSNumber *)throughputNumber;
 
 @end
 
@@ -95,7 +94,6 @@
 #define kPPPDisconnectTitle				@"Disconnect"
 #define kNoInterfaceErrorMessage		@"No Active Interfaces"
 #define kBitsLabel						@"bits"
-#define kBytesLabel						@"bytes"
 #define kBitLabel						@"b"
 #define kKbLabel						@"Kb"
 #define kMbLabel						@"Mb"
@@ -361,7 +359,7 @@
 														  keyEquivalent:@""];
 							[pppStatusItem setIndentationLevel:2];
 						} else {
-							pppStatusItem = [extraMenu addItemWithTitle:kPPPConnectedTitle
+							pppStatusItem = [extraMenu addItemWithTitle:[localizedStrings objectForKey:kPPPConnectedTitle]
 																 action:nil
 														  keyEquivalent:@""];
 							[pppStatusItem setIndentationLevel:2];
@@ -445,14 +443,13 @@
 			NSDictionary *throughputDetails = nil;
 			NSString *throughputInterface = nil;
 			// Do some dancing to make sure to get serial and VPN PPP interfaces, but not PPPoE
-			if ([netHistoryData lastObject] && ([details objectForKey:@"devicename"] || [details objectForKey:@"devicepppname"])) {
+			if ([details objectForKey:@"devicename"] || [details objectForKey:@"devicepppname"]) {
 				if ([details objectForKey:@"devicepppname"] && ![[details objectForKey:@"devicename"] hasPrefix:@"en"]) {
 					throughputInterface = [details objectForKey:@"devicepppname"];
-					throughputDetails = [[netHistoryData lastObject] objectForKey:[details objectForKey:@"devicepppname"]];
 				} else {
 					throughputInterface = [details objectForKey:@"devicename"];
-					throughputDetails = [[netHistoryData lastObject] objectForKey:[details objectForKey:@"devicename"]];
 				}
+				throughputDetails = [[netHistoryData lastObject] objectForKey:throughputInterface];
 			}
 			// Do we have throughput info on an active interface?
 			if (isActiveInterface && sampleIntervalNum && throughputInterface && throughputDetails) {
@@ -645,13 +642,13 @@
 					[copyIPItem setEnabled:NO];
 				}
 			}
-            if ([details objectForKey:@"devicename"]) {
-                NSMenuItem*resetTotals = (NSMenuItem *)[interfaceSubmenu addItemWithTitle:[localizedStrings objectForKey:kResetTrafficTotalsTitle]
-                                                                       action:@selector(resetTotals:)
-                                                                keyEquivalent:@""];
-                [resetTotals setTarget:self];
-                [resetTotals setRepresentedObject:[details objectForKey:@"devicename"]];
-            }
+			if (throughputInterface) {
+				NSMenuItem*resetTotals = (NSMenuItem *)[interfaceSubmenu addItemWithTitle:[localizedStrings objectForKey:kResetTrafficTotalsTitle]
+																   action:@selector(resetTotals:)
+															keyEquivalent:@""];
+				[resetTotals setTarget:self];
+				[resetTotals setRepresentedObject:throughputInterface];
+			}
 		}
 	} else {
 		[[extraMenu addItemWithTitle:[localizedStrings objectForKey:kNoInterfaceErrorMessage]
@@ -661,9 +658,11 @@
 
 	// Add utility items
 	[extraMenu addItem:[NSMenuItem separatorItem]];
-	[[extraMenu addItemWithTitle:[localizedStrings objectForKey:kOpenNetworkUtilityTitle]
-						  action:@selector(openNetworkUtil:)
-				   keyEquivalent:@""] setTarget:self];
+	if ([[NSWorkspace sharedWorkspace] fullPathForApplication:@"Network Utility.app"]) {
+		[[extraMenu addItemWithTitle:[localizedStrings objectForKey:kOpenNetworkUtilityTitle]
+							  action:@selector(openNetworkUtil:)
+					   keyEquivalent:@""] setTarget:self];
+	}
 	[[extraMenu addItemWithTitle:[localizedStrings objectForKey:kOpenNetworkPrefsTitle]
 						  action:@selector(openNetworkPrefs:)
 				   keyEquivalent:@""] setTarget:self];
@@ -724,7 +723,7 @@
 		case kNetScalePeakTraffic:
 			if (![preferredInterfaceConfig objectForKey:@"statname"]) break;
 			if (![netHistoryData count]) break;
-			NSDictionary *primaryStats = [[netHistoryData objectAtIndex:0]
+			NSDictionary *primaryStats = [[netHistoryData lastObject]
 										  objectForKey:[preferredInterfaceConfig objectForKey:@"statname"]];
 			if (![primaryStats objectForKey:@"peak"]) break;
 			scaleFactor = [[primaryStats objectForKey:@"peak"] floatValue];
@@ -851,7 +850,7 @@
 	}
 
 	// Draw
-	if (![preferredInterfaceConfig objectForKey:@"interfaceup"]) {
+	if (![[preferredInterfaceConfig objectForKey:@"interfaceup"] boolValue]) {
 		[inactiveColor set];
 		[topPath fill];
 		[bottomPath fill];
@@ -884,7 +883,7 @@
 		case kNetScalePeakTraffic:
 			if (![preferredInterfaceConfig objectForKey:@"statname"]) break;
 			if (![netHistoryData count]) break;
-			NSDictionary *primaryStats = [[netHistoryData objectAtIndex:0]
+			NSDictionary *primaryStats = [[netHistoryData lastObject]
 										  objectForKey:[preferredInterfaceConfig objectForKey:@"statname"]];
 			if (![primaryStats objectForKey:@"peak"]) break;
 			scaleFactor = [[primaryStats objectForKey:@"peak"] floatValue];
@@ -1060,14 +1059,15 @@
 	preferredInterfaceConfig = [netConfig interfaceConfigForInterfaceName:[ourPrefs netPreferInterface]];
 
 	// Get interval for the sample
+	NSTimeInterval currentUptime = [[NSProcessInfo processInfo] systemUptime];
 	NSTimeInterval currentSampleInterval = [ourPrefs netInterval];
-	if (lastSampleDate) {
-		currentSampleInterval = -[lastSampleDate timeIntervalSinceNow];
+	if (lastSampleUptime > 0 && currentUptime > lastSampleUptime) {
+		currentSampleInterval = currentUptime - lastSampleUptime;
 	}
 
 	// Load new net data
 	NSDictionary *netLoad = [netStats netStatsForInterval:currentSampleInterval];
-    if(netLoad){ // fix for https://github.com/yujitach/MenuMeters/issues/120
+	if (netLoad) { // fix for https://github.com/yujitach/MenuMeters/issues/120
 	// Add to history (at least one)
 	if ([ourPrefs netDisplayMode] & kNetDisplayGraph) {
 		if ([netHistoryData count] >= [ourPrefs netGraphLength]) {
@@ -1084,9 +1084,9 @@
 	[netHistoryIntervals addObject:[NSNumber numberWithDouble:currentSampleInterval]];
 	[self updateMenuWidth];
 
-	// Update for next sample
-	lastSampleDate = [NSDate date];
-    }
+		// Update for next sample
+		lastSampleUptime = currentUptime;
+	}
 	// If the menu is down force it to update
 	if (self.isMenuVisible) {
 		[self updateMenuWhenDown];
@@ -1151,9 +1151,8 @@
 					} else {
 						LiveUpdateMenuItemTitle(extraMenu,
 												[extraMenu indexOfItem:pppMenuItem],
-												kPPPConnectedTitle);
+												[localizedStrings objectForKey:kPPPConnectedTitle]);
 					}
-					break;
 					break;
 				case PPP_TERMINATE:
 				case PPP_DISCONNECTLINK:
@@ -1265,6 +1264,8 @@
 
 	// Update prefs
 	[ourPrefs saveNetPreferInterface:interfaceName];
+	[self updateMenuWidth];
+	[self updateStatusItemImage];
 	// Send the notification to the pref pane
 	[[NSNotificationCenter defaultCenter] postNotificationName:kPrefPaneBundleID
 																   object:kPrefChangeNotification];
@@ -1532,9 +1533,16 @@
 	}
 
 	NSString *scaledTrafficTotal = [self stringifyNumber:throughput withUnitLabel:unitLabel andFormat:format];
-	NSString *unscaledTrafficTotal = [self throughputStringForBytes:throughputNumber];
-
-	return [NSString stringWithFormat:@"%@ %@ (%@)", directionLabel, scaledTrafficTotal, unscaledTrafficTotal];
+	double unscaledTraffic = [throughputNumber doubleValue];
+	if ([ourPrefs netThroughputBits]) {
+		unscaledTraffic *= 8;
+		NSString *prettyTotal = [prettyIntFormatter stringForObjectValue:@(unscaledTraffic)];
+		return [NSString stringWithFormat:@"%@ %@ (%@ %@)", directionLabel, scaledTrafficTotal,
+				prettyTotal, [localizedStrings objectForKey:kBitsLabel]];
+	}
+	NSString *prettyTotal = [prettyIntFormatter stringForObjectValue:@(unscaledTraffic)];
+	return [NSString stringWithFormat:[localizedStrings objectForKey:@"%@ %@ (%@ bytes)"],
+			directionLabel, scaledTrafficTotal, prettyTotal];
 
 } // trafficStringForNumber:withLabel:
 
@@ -1557,21 +1565,5 @@
 	return [NSString stringWithFormat:format, num, [localizedStrings objectForKey:label]];
 
 } // stringifyNumber:withUnitLabel:andFormat:
-
-- (NSString *)throughputStringForBytes:(NSNumber *)throughputNumber {
-
-	double throughput = [throughputNumber doubleValue];
-	NSString *unitLabel = kBytesLabel;
-
-	if ([ourPrefs netThroughputBits]) {
-		unitLabel = kBitsLabel;
-		throughput *= 8;
-	};
-
-	NSString *prettyTotal = [prettyIntFormatter stringForObjectValue:[NSNumber numberWithDouble:throughput]];
-
-	return [NSString stringWithFormat:@"%@ %@", prettyTotal, unitLabel];
-
-} // throughputStringForBytes
 
 @end

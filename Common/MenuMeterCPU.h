@@ -71,7 +71,6 @@
 #define kCPUPowerMateMode					@"CPUPowerMateMode"
 #define kCPUShowTemperature                 @"CPUTemperature"
 #define kCPUTemperatureColor                @"CPUTemperatureColor"
-#define kCPUPowerColor                      @"CPUPowerColor"
 #define kCPUTemperatureSensor                @"CPUTemperatureSensor"
 #define kCPUTemperatureSensorDefault                @"CPUTemperatureSensorDefault"
 #define kCPUTemperatureUnit                @"CPUTemperatureUnit"
@@ -154,5 +153,3 @@ enum {
 #define kCPUUserColorDefault				(self.isCatalinaOrLater?[NSColor systemBlueColor]:[NSColor colorWithDeviceRed:0.0f green:0.0f blue:0.5f alpha:1.0f])
                                             // Orange
 #define kCPUTemperatureColorDefault         [NSColor systemRedColor]
-                                            // Green
-#define kCPUPowerColorDefault               [NSColor systemGreenColor]

@@ -39,6 +39,13 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
     }
 }
 
+static BOOL MMDiskSampleIsSelected(MenuMeterDiskIOSample *sample, NSArray *selectedDisks, BOOL foundInternal) {
+    if ([selectedDisks count]) {
+        return [selectedDisks containsObject:sample.identifier] || [selectedDisks containsObject:sample.bsdName];
+    }
+    return !foundInternal || sample.isInternal;
+}
+
 ///////////////////////////////////////////////////////////////
 //
 //	init
@@ -137,12 +144,11 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
     [self setupAppearance];
 
     // Get speed samples for selected disks
-    NSArray *selectedBSDs = [ourPrefs diskSelectedPhysicalDisks];
+    NSArray *selectedDisks = [ourPrefs diskSelectedPhysicalDisks];
     NSArray *allSamples = [diskIOMonitor diskSpeedSamples];
 
     double totalRead = 0, totalWrite = 0;
     // If no disks selected, sum all internal ones (or all if none marked internal)
-    BOOL foundSelected = [selectedBSDs count] > 0;
     BOOL foundInternal = NO;
 
     for (MenuMeterDiskIOSample *sample in allSamples) {
@@ -150,17 +156,7 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
     }
 
     for (MenuMeterDiskIOSample *sample in allSamples) {
-        if (foundSelected) {
-            if ([selectedBSDs containsObject:sample.bsdName]) {
-                totalRead += sample.readBytesPerSec;
-                totalWrite += sample.writeBytesPerSec;
-            }
-        } else if (foundInternal) {
-            if (sample.isInternal) {
-                totalRead += sample.readBytesPerSec;
-                totalWrite += sample.writeBytesPerSec;
-            }
-        } else {
+        if (MMDiskSampleIsSelected(sample, selectedDisks, foundInternal)) {
             totalRead += sample.readBytesPerSec;
             totalWrite += sample.writeBytesPerSec;
         }
@@ -194,12 +190,15 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
     // Throughput section: show per-disk speed
     NSArray *allSamples = [diskIOMonitor diskSpeedSamples];
     if ([allSamples count]) {
-        BOOL hasSelected = [[ourPrefs diskSelectedPhysicalDisks] count] > 0;
+        NSArray *selectedDisks = [ourPrefs diskSelectedPhysicalDisks];
+        BOOL foundInternal = NO;
         for (MenuMeterDiskIOSample *sample in allSamples) {
-            // Only show selected disks (or all if none selected)
-            if (hasSelected && ![[ourPrefs diskSelectedPhysicalDisks] containsObject:sample.bsdName]) continue;
+            if (sample.isInternal) foundInternal = YES;
+        }
+        for (MenuMeterDiskIOSample *sample in allSamples) {
+            if (!MMDiskSampleIsSelected(sample, selectedDisks, foundInternal)) continue;
 
-            NSString *intExt = sample.isInternal ? @"Int" : @"Ext";
+            NSString *intExt = [localizedStrings objectForKey:sample.isInternal ? @"Internal" : @"External"];
             NSString *title = [NSString stringWithFormat:@"%@ (%@) %@",
                                sample.displayName, sample.bsdName, intExt];
             NSMenuItem *item = [extraMenu addItemWithTitle:title action:nil keyEquivalent:@""];
@@ -371,11 +370,11 @@ static NSString *MMDiskSpeedString(double bytesPerSec) {
         }
         NS_DURING
             if (removable) {
-                [[NSTask launchedTaskWithLaunchPath:@"/usr/sbin/diskutil"
-                                         arguments:@[@"eject", [sender representedObject]]] waitUntilExit];
+                [NSTask launchedTaskWithLaunchPath:@"/usr/sbin/diskutil"
+                                         arguments:@[@"eject", [sender representedObject]]];
             } else {
-                [[NSTask launchedTaskWithLaunchPath:@"/usr/sbin/diskutil"
-                                         arguments:@[@"unmount", [sender representedObject]]] waitUntilExit];
+                [NSTask launchedTaskWithLaunchPath:@"/usr/sbin/diskutil"
+                                         arguments:@[@"unmount", [sender representedObject]]];
             }
         NS_HANDLER
             NSLog(@"MenuMeterDisk unable to eject/unmount \"%@\".", [sender representedObject]);

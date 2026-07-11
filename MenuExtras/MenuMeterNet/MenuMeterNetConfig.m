@@ -22,6 +22,8 @@
 //
 
 #import "MenuMeterNetConfig.h"
+#import <ifaddrs.h>
+#import <net/if.h>
 
 
 ///////////////////////////////////////////////////////////////
@@ -503,7 +505,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	NSString *interfaceName = [self interfaceNameForServiceID:serviceID];
 	if ([interfaceName hasPrefix:@"en"]) {
 		NSNumber *speed = [self speedForInterfaceName:interfaceName];
-		if (speed) {
+		if ([speed doubleValue] > 0) {
 			[cachedServiceSpeed setObject:speed forKey:serviceID];
 			return speed;
 		}
@@ -568,28 +570,40 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 		cachedInterfaceUp = [NSMutableDictionary dictionary];
 	}
 
-	if ([interfaceName hasPrefix:@"en"]) {
-		// Ethernet
-		NSDictionary *linkDict = [self sysconfigValueForKey:
-									[NSString stringWithFormat:@"State:/Network/Interface/%@/Link", interfaceName]];
-		if ([linkDict objectForKey:@"Active"]) {
-			[cachedInterfaceUp setObject:[linkDict objectForKey:@"Active"] forKey:interfaceName];
-			return [[linkDict objectForKey:@"Active"] boolValue];
-		}
-	} else if ([interfaceName hasPrefix:@"ppp"]) {
+	if ([interfaceName hasPrefix:@"ppp"]) {
 		// PPP
 		NSDictionary *pppDict = [pppGatherer statusForInterfaceName:interfaceName];
-		if ([[pppDict objectForKey:@"status"] intValue] == PPP_RUNNING) {
-			[cachedInterfaceUp setObject:[NSNumber numberWithBool:YES] forKey:interfaceName];
-			return YES;
-		} else {
-			[cachedInterfaceUp setObject:[NSNumber numberWithBool:NO] forKey:interfaceName];
-			return NO;
+		NSNumber *status = [pppDict objectForKey:@"status"];
+		if (status) {
+			BOOL isUp = ([status intValue] == PPP_RUNNING);
+			[cachedInterfaceUp setObject:@(isUp) forKey:interfaceName];
+			return isUp;
 		}
 	}
 
-	// Fall through, assume interface is active
-	return YES;
+	NSDictionary *linkDict = [self sysconfigValueForKey:
+								[NSString stringWithFormat:@"State:/Network/Interface/%@/Link", interfaceName]];
+	if ([linkDict objectForKey:@"Active"]) {
+		[cachedInterfaceUp setObject:[linkDict objectForKey:@"Active"] forKey:interfaceName];
+		return [[linkDict objectForKey:@"Active"] boolValue];
+	}
+
+	struct ifaddrs *interfaces = NULL;
+	const char *bsdName = [interfaceName UTF8String];
+	if (bsdName && getifaddrs(&interfaces) == 0) {
+		for (struct ifaddrs *interface = interfaces; interface; interface = interface->ifa_next) {
+			if (interface->ifa_name && strcmp(interface->ifa_name, bsdName) == 0) {
+				BOOL isUp = ((interface->ifa_flags & (IFF_UP | IFF_RUNNING)) == (IFF_UP | IFF_RUNNING));
+				freeifaddrs(interfaces);
+				[cachedInterfaceUp setObject:@(isUp) forKey:interfaceName];
+				return isUp;
+			}
+		}
+		freeifaddrs(interfaces);
+	}
+
+	[cachedInterfaceUp setObject:@NO forKey:interfaceName];
+	return NO;
 
 } // interfaceNameIsUp
 
@@ -628,28 +642,28 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 }
 
 - (NSNumber *)speedForInterfaceName:(NSString*)bsdInterface{
-    {
-        NSDictionary* airportDict=[self sysconfigValueForKey:[NSString stringWithFormat:@"Setup:/Network/Interface/%@/AirPort",bsdInterface]];
-        if(airportDict){
-            NSNumber* x = [self speedForAirport];
-            if(x){
-                return x;
-            }
-        }
-    }
-    {
-        NSNumber* x=[self speedForInterfaceNameViaIOKit:bsdInterface];
-        if(x){
-            return x;
-        }
-    }
-    {
-        NSNumber* x=[self speedForInterfaceNameViaIfConfig:bsdInterface];
-        if(x){
-            return x;
-        }
-    }
-    return [NSNumber numberWithLong:kInterfaceDefaultSpeed];
+	{
+		NSDictionary* airportDict=[self sysconfigValueForKey:[NSString stringWithFormat:@"Setup:/Network/Interface/%@/AirPort",bsdInterface]];
+		if(airportDict){
+			NSNumber* x = [self speedForAirport];
+			if([x doubleValue] > 0){
+				return x;
+			}
+		}
+	}
+	{
+		NSNumber* x=[self speedForInterfaceNameViaIOKit:bsdInterface];
+		if([x doubleValue] > 0){
+			return x;
+		}
+	}
+	{
+		NSNumber* x=[self speedForInterfaceNameViaIfConfig:bsdInterface];
+		if([x doubleValue] > 0){
+			return x;
+		}
+	}
+	return [NSNumber numberWithLong:kInterfaceDefaultSpeed];
 }
 - (NSNumber*)speedForAirport
 {
@@ -657,13 +671,14 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     NSRange r=[line rangeOfString:@":"];
     if(r.location==NSNotFound){
         return nil;
-    }
-    line=[line substringFromIndex:r.location+1];
-    return [NSNumber numberWithDouble:[line doubleValue]*1000*1000];
+	}
+	line=[line substringFromIndex:r.location+1];
+	double speed = [line doubleValue] * 1000 * 1000;
+	return speed > 0 ? [NSNumber numberWithDouble:speed] : nil;
 }
 - (NSNumber *)speedForInterfaceNameViaIfConfig:(NSString *)bsdInterface {
 
-	if (!bsdInterface) return [NSNumber numberWithLong:kInterfaceDefaultSpeed];
+	if (!bsdInterface) return nil;
     NSLog(@"getting the speed for %@",bsdInterface);
     /* The old way to get the speed via IOKit no longer reliably works, most probably due to the slow move to DriverKit.
      The link speed as reported by NetworkUtility.app can also be obtained by ifconfig, whose source code is available at
@@ -671,55 +686,56 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     e.g. for Catalina. Unfortunately the ioctl used there is not exposed in the standard development headers, although you can presumably use it by copying the content of the private headers.
      Here instead I just directly call ifconfig.
      */
-    NSString*line=[self runCommand:[NSString stringWithFormat:@"ifconfig -v %@ | egrep 'link rate|uplink'",bsdInterface]];
-    if([line containsString:@"does not"]){
-         return [NSNumber numberWithLong:0];
+	NSString*line=[self runCommand:[NSString stringWithFormat:@"ifconfig -v %@ | egrep 'link rate|uplink'",bsdInterface]];
+	if([line containsString:@"does not"]){
+		return nil;
+	}
+	NSRange r=[line rangeOfString:@"/"];
+	if(r.location==NSNotFound){
+		r=[line rangeOfString:@": "];
+	}
+	if(r.location==NSNotFound){
+		return nil;
     }
-    NSRange r=[line rangeOfString:@"/"];
-    if(r.location==NSNotFound){
-        r=[line rangeOfString:@": "];
-    }
-    if(r.location==NSNotFound){
-        return [NSNumber numberWithLong:0];
-    }
-    line=[line substringFromIndex:r.location+1];
-    double factor=1;
-    if((r=[line rangeOfString:@"Gbps"]).location!=NSNotFound){
-        factor=1000*1000*1000;
-    }else if((r=[line rangeOfString:@"Mbps"]).location!=NSNotFound){
-        factor=1000*1000;
-    }else if((r=[line rangeOfString:@"Kbps"]).location!=NSNotFound){
-        factor=1000;
-    }else if((r=[line rangeOfString:@"bps"]).location!=NSNotFound){
-        factor=1;
-    }else{
-        factor=0;
-    }
+	line=[line substringFromIndex:r.location+1];
+	double factor=1;
+	if((r=[line rangeOfString:@"Gbps"]).location!=NSNotFound){
+		factor=1000*1000*1000;
+	}else if((r=[line rangeOfString:@"Mbps"]).location!=NSNotFound){
+		factor=1000*1000;
+	}else if((r=[line rangeOfString:@"Kbps"]).location!=NSNotFound){
+		factor=1000;
+	}else if((r=[line rangeOfString:@"bps"]).location!=NSNotFound){
+		factor=1;
+	}else{
+		return nil;
+	}
     
-    line=[line substringToIndex:r.location];
-    return [NSNumber numberWithDouble:[line doubleValue]*factor];
+	line=[line substringToIndex:r.location];
+	double speed = [line doubleValue] * factor;
+	return speed > 0 ? [NSNumber numberWithDouble:speed] : nil;
 }
 - (NSNumber *)speedForInterfaceNameViaIOKit:(NSString *)bsdInterface {
 	// Get the speed from IOKit
-	io_iterator_t iterator;
-	IOServiceGetMatchingServices(masterPort,
-								 IOBSDNameMatching(masterPort, kNilOptions, [bsdInterface UTF8String]),
-								 &iterator);
+	io_iterator_t iterator = IO_OBJECT_NULL;
+	kern_return_t result = IOServiceGetMatchingServices(masterPort,
+												 IOBSDNameMatching(masterPort, kNilOptions, [bsdInterface UTF8String]),
+												 &iterator);
 	// If we didn't get an iterator guess 10Mbit
-    if (!iterator) return nil;
+	if (result != KERN_SUCCESS || !iterator) return nil;
 
 	// Otherwise poke around IOKit
 	io_registry_entry_t	regEntry = IOIteratorNext(iterator);
 	if (!regEntry) {
 		IOObjectRelease(iterator);
-		return [NSNumber numberWithLong:kInterfaceDefaultSpeed];
+		return nil;
 	}
 	io_object_t	controllerService = 0;
 	IORegistryEntryGetParentEntry(regEntry, kIOServicePlane, &controllerService);
 	if (!controllerService) {
 		IOObjectRelease(regEntry);
 		IOObjectRelease(iterator);
-		return [NSNumber numberWithLong:kInterfaceDefaultSpeed];
+		return nil;
 	}
 	NSNumber *linkSpeed = (NSNumber *)CFBridgingRelease(IORegistryEntryCreateCFProperty(controllerService,
 																						CFSTR(kIOLinkSpeed),

@@ -206,3 +206,7 @@
 
 // Miscellaneous error strings
 "No Active Interfaces" = "Geen actieve interfaces";
+"Internal" = "Intern";
+"External" = "Extern";
+"Using this feature for the first time will bring up two alerts by the system" = "Wanneer u deze functie voor het eerst gebruikt, toont het systeem twee meldingen";
+"This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accessibility features." = "Deze functie gebruikt AppleScript en Systeemgebeurtenissen om een klik te simuleren en naar een specifiek paneel van Activiteitenweergave te gaan. Hiervoor zijn nodig: 1. een bevestiging dat MenuMeters AppleScript mag gebruiken en 2. toegang tot Toegankelijkheid voor MenuMeters onder Privacy en beveiliging in Systeeminstellingen.";

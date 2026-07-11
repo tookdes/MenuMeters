@@ -23,6 +23,11 @@
 
 #import "MenuMeterNetStats.h"
 
+static NSString * const kNetStatsSourceKey = @"source";
+static NSString * const kNetStatsPPPSource = @"ppp";
+static NSString * const kNetStatsPPPIdleSource = @"ppp-idle";
+static NSString * const kNetStatsSysctlSource = @"sysctl";
+
 @implementation MenuMeterNetStats
 
 ///////////////////////////////////////////////////////////////
@@ -132,18 +137,16 @@
 		// Load in old statistics for this interface
 		NSDictionary *oldStats = [lastData objectForKey:interfaceName];
 
-		if ([interfaceName hasPrefix:@"ppp"]) {
-			if (!pppGatherer) {
-				currentData += ifmsg->ifm_msglen;
-				continue;
-			}
+		BOOL handledAsPPP = NO;
+		if ([interfaceName hasPrefix:@"ppp"] && pppGatherer) {
 			// We handle PPP connections using data directly from ppp subsystem. On
 			// old systems this was required because the outbytes from sysctl was
 			// always zero.
 			NSDictionary *pppStats = [pppGatherer statusForInterfaceName:interfaceName];
+			handledAsPPP = (pppStats != nil);
 			// Stats are only valid if PPP is running
 			if ([[pppStats objectForKey:@"status"] intValue] == PPP_RUNNING) {
-				if (oldStats) {
+				if (oldStats && [[oldStats objectForKey:kNetStatsSourceKey] isEqualToString:kNetStatsPPPSource]) {
 					// Calculate various stats in 64-bit with 32-bit overflow.
 					// We know the PPP data is sized at 32-bits and we calc at 64-bits
 					uint32_t ifIn = [[pppStats objectForKey:@"inBytes"] unsignedIntValue];
@@ -188,29 +191,47 @@
 										@"totalout",
 										[NSNumber numberWithDouble:peak],
 										@"peak",
+										kNetStatsPPPSource,
+										kNetStatsSourceKey,
 										nil]
 								forKey:interfaceName];
 				} else {
+					NSNumber *totalIn = oldStats ? [oldStats objectForKey:@"totalin"] : [pppStats objectForKey:@"inBytes"];
+					NSNumber *totalOut = oldStats ? [oldStats objectForKey:@"totalout"] : [pppStats objectForKey:@"outBytes"];
+					NSNumber *peak = oldStats ? [oldStats objectForKey:@"peak"] : @0.0;
 					[newStats setObject:[NSDictionary dictionaryWithObjectsAndKeys:
-											[pppStats objectForKey:@"inBytes"],
-											@"totalin",
-											[pppStats objectForKey:@"outBytes"],
-											@"totalout",
 											[pppStats objectForKey:@"inBytes"],
 											@"ifin",
 											[pppStats objectForKey:@"outBytes"],
 											@"ifout",
+											@0,
+											@"deltain",
+											@0,
+											@"deltaout",
+											totalIn,
+											@"totalin",
+											totalOut,
+											@"totalout",
 											// No deltas since that would make
 											// first sample artificially large
-											[NSNumber numberWithDouble:0.0],
+											peak,
 											@"peak",
+											kNetStatsPPPSource,
+											kNetStatsSourceKey,
 											nil]
 								 forKey:interfaceName];
 				}
+			} else if (oldStats) {
+				NSMutableDictionary *idleStats = [oldStats mutableCopy];
+				idleStats[@"deltain"] = @0;
+				idleStats[@"deltaout"] = @0;
+				idleStats[kNetStatsSourceKey] = kNetStatsPPPIdleSource;
+				newStats[interfaceName] = idleStats;
 			}
-			} else {
-				// Not a PPP connection
-				if (oldStats && (ifmsg->ifm_flags & IFF_UP)) {
+		}
+		if (!handledAsPPP) {
+			// Not a PPP connection, or PPP status was unavailable.
+			if (oldStats && [[oldStats objectForKey:kNetStatsSourceKey] isEqualToString:kNetStatsSysctlSource]) {
 					uint64_t lastTotalIn = [[oldStats objectForKey:@"totalin"] unsignedLongLongValue];
 					uint64_t lastTotalOut = [[oldStats objectForKey:@"totalout"] unsignedLongLongValue];
 					// New totals
@@ -253,21 +274,32 @@
 										@"totalout",
 										[NSNumber numberWithDouble:peak],
 										@"peak",
+										kNetStatsSysctlSource,
+										kNetStatsSourceKey,
 										nil]
 							forKey:interfaceName];
 				} else {
+					NSNumber *totalIn = oldStats ? [oldStats objectForKey:@"totalin"] : [NSNumber numberWithUnsignedLongLong:ifmsg->ifm_data.ifi_ibytes];
+					NSNumber *totalOut = oldStats ? [oldStats objectForKey:@"totalout"] : [NSNumber numberWithUnsignedLongLong:ifmsg->ifm_data.ifi_obytes];
+					NSNumber *peak = oldStats ? [oldStats objectForKey:@"peak"] : @0.0;
 					[newStats setObject:[NSDictionary dictionaryWithObjectsAndKeys:
 											// Paranoia, is this where the neg numbers came from?
 											[NSNumber numberWithUnsignedLongLong:ifmsg->ifm_data.ifi_ibytes],
 											@"ifin",
 											[NSNumber numberWithUnsignedLongLong:ifmsg->ifm_data.ifi_obytes],
 											@"ifout",
-										[NSNumber numberWithUnsignedLongLong:ifmsg->ifm_data.ifi_ibytes],
+										@0,
+										@"deltain",
+										@0,
+										@"deltaout",
+										totalIn,
 										@"totalin",
-										[NSNumber numberWithUnsignedLongLong:ifmsg->ifm_data.ifi_obytes],
+										totalOut,
 										@"totalout",
-										[NSNumber numberWithDouble:0],
+										peak,
 										@"peak",
+										kNetStatsSysctlSource,
+										kNetStatsSourceKey,
 										nil]
 						forKey:interfaceName];
 			}

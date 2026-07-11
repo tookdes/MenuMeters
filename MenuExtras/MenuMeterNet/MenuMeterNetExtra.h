@@ -51,7 +51,7 @@
 	// Cached prerendered text
     CGFloat throughputLabelWidth;
 	// Historical data samples and current interface config
-	NSDate							*lastSampleDate;
+	NSTimeInterval					lastSampleUptime;
 	NSMutableArray					*netHistoryData, *netHistoryIntervals;
 	NSDictionary					*preferredInterfaceConfig;
 	// Cached dictionary of menu items that can be updated

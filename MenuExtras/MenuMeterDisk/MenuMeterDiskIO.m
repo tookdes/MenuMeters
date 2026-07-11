@@ -102,15 +102,16 @@ static BOOL MMIsExternalDrive(io_registry_entry_t entry) {
     io_registry_entry_t parent = 0;
     kern_return_t kr = IORegistryEntryGetParentEntry(entry, kIOServicePlane, &parent);
     while (kr == KERN_SUCCESS && parent) {
-        io_name_t className;
-        IOObjectGetClass(parent, className);
-        NSString *cls = [NSString stringWithUTF8String:className];
-        if ([cls containsString:@"USB"] || [cls containsString:@"Thunderbolt"] ||
-            [cls containsString:@"MassStorage"] || [cls containsString:@"FireWire"]) {
-            IOObjectRelease(parent);
-            return YES;
+        io_name_t className = {0};
+        if (IOObjectGetClass(parent, className) == KERN_SUCCESS) {
+            NSString *cls = MMStringFromCName(className);
+            if ([cls containsString:@"USB"] || [cls containsString:@"Thunderbolt"] ||
+                [cls containsString:@"MassStorage"] || [cls containsString:@"FireWire"]) {
+                IOObjectRelease(parent);
+                return YES;
+            }
         }
-        io_registry_entry_t grandparent;
+        io_registry_entry_t grandparent = 0;
         kr = IORegistryEntryGetParentEntry(parent, kIOServicePlane, &grandparent);
         IOObjectRelease(parent);
         parent = grandparent;
@@ -154,6 +155,16 @@ static NSString *MMBSDNameForMedia(io_registry_entry_t media) {
     }
     CFRelease(bsd);
     return name;
+}
+
+static NSString *MMIdentifierForMedia(io_registry_entry_t media, NSString *bsdName) {
+    CFTypeRef uuid = IORegistryEntryCreateCFProperty(media, CFSTR(kIOMediaUUIDKey), kCFAllocatorDefault, 0);
+    NSString *identifier = nil;
+    if (uuid && CFGetTypeID(uuid) == CFStringGetTypeID()) {
+        identifier = [NSString stringWithString:(__bridge NSString *)uuid];
+    }
+    if (uuid) CFRelease(uuid);
+    return identifier.length ? identifier : bsdName;
 }
 
 static NSString *MMProductFromParents(io_registry_entry_t entry) {
@@ -298,11 +309,11 @@ static NSString *MMDisplayNameForMedia(io_registry_entry_t media, io_registry_en
     IOIteratorReset(blockDeviceIterator);
 
     DiskIOActivityType activity = kDiskActivityIdle;
-    if ((totalRead != previousTotalRead) && (totalWrite != previousTotalWrite)) {
+    if ((totalRead > previousTotalRead) && (totalWrite > previousTotalWrite)) {
         activity = kDiskActivityReadWrite;
-    } else if (totalRead != previousTotalRead) {
+    } else if (totalRead > previousTotalRead) {
         activity = kDiskActivityRead;
-    } else if (totalWrite != previousTotalWrite) {
+    } else if (totalWrite > previousTotalWrite) {
         activity = kDiskActivityWrite;
     }
     previousTotalRead = totalRead;
@@ -323,7 +334,7 @@ static NSString *MMDisplayNameForMedia(io_registry_entry_t media, io_registry_en
         if (err != KERN_SUCCESS) return @[];
     }
 
-    NSDate *now = [NSDate date];
+    NSTimeInterval now = [NSProcessInfo processInfo].systemUptime;
     NSMutableArray *samples = [NSMutableArray array];
     io_registry_entry_t driveEntry = MACH_PORT_NULL;
     NSMutableSet *seenBSD = [NSMutableSet set];
@@ -351,6 +362,7 @@ static NSString *MMDisplayNameForMedia(io_registry_entry_t media, io_registry_en
             continue;
         }
         [seenBSD addObject:bsdName];
+        NSString *identifier = MMIdentifierForMedia(media, bsdName);
 
         NSDictionary *statistics = CFBridgingRelease(IORegistryEntryCreateCFProperty(driveEntry,
             CFSTR(kIOBlockStorageDriverStatisticsKey), kCFAllocatorDefault, kNilOptions));
@@ -365,11 +377,11 @@ static NSString *MMDisplayNameForMedia(io_registry_entry_t media, io_registry_en
         uint64_t curRead = rn ? [rn unsignedLongLongValue] : 0;
         uint64_t curWrite = wn ? [wn unsignedLongLongValue] : 0;
 
-        NSDictionary *prev = diskTracking[bsdName];
+        NSDictionary *prev = diskTracking[identifier];
         double readBps = 0, writeBps = 0;
 
         if (prev) {
-            NSTimeInterval elapsed = [now timeIntervalSinceDate:prev[@"time"]];
+            NSTimeInterval elapsed = now - [prev[@"time"] doubleValue];
             if (elapsed > 0) {
                 uint64_t prevRead = [prev[@"read"] unsignedLongLongValue];
                 uint64_t prevWrite = [prev[@"write"] unsignedLongLongValue];
@@ -378,10 +390,11 @@ static NSString *MMDisplayNameForMedia(io_registry_entry_t media, io_registry_en
             }
         }
 
-        diskTracking[bsdName] = @{@"read": @(curRead), @"write": @(curWrite), @"time": now};
+        diskTracking[identifier] = @{@"read": @(curRead), @"write": @(curWrite), @"time": @(now)};
 
         MenuMeterDiskIOSample *sample = [[MenuMeterDiskIOSample alloc] init];
         sample.bsdName = bsdName;
+        sample.identifier = identifier;
         sample.displayName = MMDisplayNameForMedia(media, driveEntry, bsdName);
         sample.isInternal = !MMIsExternalDrive(driveEntry);
         sample.readBytesPerSec = readBps;
@@ -393,13 +406,13 @@ static NSString *MMDisplayNameForMedia(io_registry_entry_t media, io_registry_en
     }
     IOIteratorReset(blockDeviceIterator);
 
-    NSMutableSet *currentBSDNames = [NSMutableSet set];
+    NSMutableSet *currentIdentifiers = [NSMutableSet set];
     for (MenuMeterDiskIOSample *s in samples) {
-        [currentBSDNames addObject:s.bsdName];
+        [currentIdentifiers addObject:s.identifier];
     }
     NSMutableArray *toRemove = [NSMutableArray array];
     for (NSString *key in diskTracking) {
-        if (![currentBSDNames containsObject:key]) [toRemove addObject:key];
+        if (![currentIdentifiers containsObject:key]) [toRemove addObject:key];
     }
     [diskTracking removeObjectsForKeys:toRemove];
 
@@ -442,12 +455,14 @@ static NSString *MMDisplayNameForMedia(io_registry_entry_t media, io_registry_en
             continue;
         }
         [seenBSD addObject:bsdName];
+        NSString *identifier = MMIdentifierForMedia(media, bsdName);
 
         NSString *displayName = MMDisplayNameForMedia(media, entry, bsdName);
         BOOL isExternal = MMIsExternalDrive(entry);
 
         [disks addObject:@{
             @"bsdName": bsdName,
+            @"identifier": identifier,
             @"displayName": displayName,
             @"isInternal": @(!isExternal)
         }];

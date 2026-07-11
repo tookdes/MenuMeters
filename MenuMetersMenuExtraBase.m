@@ -17,6 +17,7 @@
 #import "MenuMeterDefaults.h"
 #import "MenuMeters.h"
 #import "EMCLoginItem.h"
+#import <math.h>
 
 #define kAppleInterfaceThemeChangedNotification        @"AppleInterfaceThemeChangedNotification"
 
@@ -48,8 +49,17 @@
 
 -(NSColor*)colorByAdjustingForLightDark:(NSColor*)c
 {
+    NSAppearance *previousAppearance = [NSAppearance currentAppearance];
     [self setupAppearance];
-    return [c blendedColorWithFraction:[[NSUserDefaults standardUserDefaults] floatForKey:@"tintPercentage"]/100  ofColor:self.isDark?[[NSColor whiteColor] colorWithAlphaComponent:[c alphaComponent]]:[[NSColor blackColor] colorWithAlphaComponent:[c alphaComponent]]];
+    CGFloat tint = [[NSUserDefaults standardUserDefaults] floatForKey:@"tintPercentage"] / 100.0;
+    if (!isfinite(tint)) tint = 0.0;
+    tint = MIN(1.0, MAX(0.0, tint));
+    NSColor *result = [c blendedColorWithFraction:tint
+                                          ofColor:self.isDark ?
+        [[NSColor whiteColor] colorWithAlphaComponent:[c alphaComponent]] :
+        [[NSColor blackColor] colorWithAlphaComponent:[c alphaComponent]]];
+    [NSAppearance setCurrentAppearance:previousAppearance];
+    return result;
 }
 -(instancetype)initWithBundleID:(NSString*)bundleID
 {
@@ -96,10 +106,14 @@
     return [NSImage imageWithSize:imageSize
                           flipped:NO
                    drawingHandler:^BOOL(NSRect dstRect) {
+        NSAppearance *previousAppearance = [NSAppearance currentAppearance];
+        [self setupAppearance];
         NSAffineTransform *transform = [NSAffineTransform transform];
         [transform translateXBy:padding yBy:0.0];
         [transform concat];
-        return [self renderImage];
+        BOOL rendered = [self renderImage];
+        [NSAppearance setCurrentAppearance:previousAppearance];
+        return rendered;
     }];
 }
 -(BOOL)renderImage
@@ -198,14 +212,19 @@
     if(object==statusItem.button && [keyPath isEqualToString:@"effectiveAppearance"]){
         NSAppearance*old=change[NSKeyValueChangeOldKey];
         NSAppearance*new=change[NSKeyValueChangeNewKey];
-        if(![old.name isEqualToString:new.name]){
+        if(![old isKindOfClass:[NSAppearance class]] ||
+           ![new isKindOfClass:[NSAppearance class]] ||
+           ![old.name isEqualToString:new.name]){
             [self setupColor:nil];
         }
+        return;
     }
 
     if([keyPath isEqualToString:@"tintPercentage"]){
         [self setupColor:nil];
+        return;
     }
+    [super observeValueForKeyPath:keyPath ofObject:object change:change context:context];
 }
 - (void)openMenuMetersPref:(id)sender
 {
@@ -318,12 +337,6 @@
     }
     return isDark;
 }
--(BOOL)isInstalledButHiddenBySystem
-{
-    // ponytail: this heuristic has repeatedly false-positive'd across menu bar
-    // managers and macOS menu layouts; keep the API but disable the alert path.
-    return NO;
-}
 -(NSColor*)menuBarTextColor
 {
 #if (__MAC_OS_X_VERSION_MAX_ALLOWED >= 101400)
@@ -348,7 +361,8 @@
 - (void)setupAppearance {
 #if (__MAC_OS_X_VERSION_MAX_ALLOWED >= 101400)
     if(@available(macOS 10.14,*)){
-        [NSAppearance setCurrentAppearance:statusItem.button.effectiveAppearance];
+        NSAppearance *appearance = statusItem.button.effectiveAppearance;
+        if (appearance) [NSAppearance setCurrentAppearance:appearance];
     }
 #endif
 }

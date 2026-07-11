@@ -23,6 +23,7 @@
 
 #import "MenuMeterPowerMate.h"
 #import <mach/mach_port.h>
+#import <math.h>
 
 
 ///////////////////////////////////////////////////////////////
@@ -246,6 +247,7 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 	if (!(devicePresent && deviceInterface)) return;
 
 	// Sanity
+	if (!isfinite(level)) return;
 	if (level > 1.0) level = 1.0;
 	if (level < 0) level = 0;
 
@@ -281,6 +283,7 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 	if (!(devicePresent && deviceInterface)) return;
 
 	// Sanity
+	if (!isfinite(level)) return;
 	if (level > 1.0) level = 1.0;
 	if (level < 0) level = 0;
 
@@ -288,7 +291,10 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 	[self stopPulse];
 
 	// We tick every kGlowRampInterval seconds, is the interval too short?
-	if (interval <= kGlowRampInterval) [self setGlow:level];
+	if (!isfinite(interval) || interval <= kGlowRampInterval) {
+		[self setGlow:level];
+		return;
+	}
 
 	// Calc steps. We're happy with steps that are actually finer
 	// than the device can handle.
@@ -313,6 +319,7 @@ static void DeviceTerminated(void *ref, io_iterator_t iterator) {
 	if (!(devicePresent && deviceInterface)) return;
 
 	// Sanity
+	if (!isfinite(rate)) return;
 	if (rate > 1.0) rate = 1.0;
 	if (rate < 0) rate = 0;
 

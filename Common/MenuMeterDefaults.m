@@ -27,6 +27,7 @@
 #import "MenuMeterMem.h"
 #import "MenuMeterDisk.h"
 #import "MenuMeterNet.h"
+#import <math.h>
 
 
 ///////////////////////////////////////////////////////////////
@@ -47,7 +48,6 @@
 - (void)saveIntPref:(NSString *)prefName value:(int)value;
 - (int)loadBitFlagPref:(NSString *)prefName validFlags:(int)flags
           defaultValue:(int)defaultValue;
-- (void)saveBitFlagPref:(NSString *)prefName value:(int)value;
 #ifndef ELCAPITAN
 - (BOOL)loadBoolPref:(NSString *)prefName defaultValue:(BOOL)defaultValue;
 - (void)saveBoolPref:(NSString *)prefName value:(BOOL)value;
@@ -74,11 +74,14 @@
     NSData*data=[NSData dataWithContentsOfFile:[[NSString stringWithFormat:@"~/Library/Preferences/%@.plist", kMenuMeterDefaultsDomain] stringByExpandingTildeInPath]];
     if(data){
         NSError*error=nil;
-        NSDictionary*dict=[NSPropertyListSerialization propertyListWithData:data options:NSPropertyListImmutable format:nil error:&error];
-        if(dict){
+        id plist=[NSPropertyListSerialization propertyListWithData:data options:NSPropertyListImmutable format:nil error:&error];
+        if([plist isKindOfClass:[NSDictionary class]]){
+            NSDictionary *dict = plist;
             NSData*defaultData=[NSData dataWithContentsOfFile:[[NSBundle mainBundle] pathForResource:kMenuMeterDefaultsDomain ofType:@"plist"]];
-            NSDictionary*defaultDict=[NSPropertyListSerialization propertyListWithData:defaultData options:NSPropertyListImmutable format:nil error:nil];
-            for(NSString*key in [dict allKeys]){
+            id defaultPlist=[NSPropertyListSerialization propertyListWithData:defaultData options:NSPropertyListImmutable format:nil error:nil];
+            NSDictionary *defaultDict=[defaultPlist isKindOfClass:[NSDictionary class]] ? defaultPlist : @{};
+            for(id key in [dict allKeys]){
+                if (![key isKindOfClass:[NSString class]]) continue;
                 NSLog(@"migrating %@", key);
                 NSObject*value=[dict objectForKey:key];
                 NSObject*defaultValue=[defaultDict objectForKey:key];
@@ -98,9 +101,10 @@
 + (MenuMeterDefaults*)sharedMenuMeterDefaults
 {
     static MenuMeterDefaults*foo=nil;
-    if(!foo){
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
         foo=[[MenuMeterDefaults alloc] init];
-    }
+    });
     return foo;
 }
 - (id)init {
@@ -249,10 +253,6 @@
     return [self loadColorPref:kCPUTemperatureColor defaultValue:kCPUTemperatureColorDefault];
 } //cpuTemperatureColor
 
-- (NSColor *)cpuPowerColor {
-    return [self loadColorPref:kCPUPowerColor defaultValue:kCPUPowerColorDefault];
-} //cpuPowerColor
-
 - (void)saveCpuInterval:(double)interval {
 	[self saveDoublePref:kCPUIntervalPref value:interval];
 } // saveCpuInterval
@@ -296,10 +296,6 @@
 - (void)saveCpuSortByUsage:(BOOL)sort {
 	[self saveBoolPref:kCPUSortByUsagePref value:sort];
 } // saveCpuSortByUsage
-
-- (void)saveCpuPowerColor:(NSColor *)color {
-    [self saveColorPref:kCPUPowerColor value:color];
-}
 
 - (void)saveCpuPowerMate:(BOOL)active {
 	[self saveBoolPref:kCPUPowerMatePref value:active];
@@ -452,50 +448,18 @@
                     defaultValue:kDiskDisplayDefault];
 } // diskDisplayMode
 
-- (BOOL)diskThroughputLabel {
-    return [self loadBoolPref:kDiskThroughputLabelPref defaultValue:kDiskThroughputLabelDefault];
-} // diskThroughputLabel
-
 - (NSArray *)diskSelectedPhysicalDisks {
     NSArray *disks = [[NSUserDefaults standardUserDefaults] arrayForKey:kDiskSelectedPhysicalDisksPref];
     return disks ?: @[];
 } // diskSelectedPhysicalDisks
 
-- (NSColor *)diskReadColor {
-    return [self loadColorPref:kDiskReadColorPref defaultValue:kDiskReadColorDefault];
-} // diskReadColor
-
-- (NSColor *)diskWriteColor {
-    return [self loadColorPref:kDiskWriteColorPref defaultValue:kDiskWriteColorDefault];
-} // diskWriteColor
-
-- (NSColor *)diskInactiveColor {
-    return [self loadColorPref:kDiskInactiveColorPref defaultValue:kDiskInactiveColorDefault];
-} // diskInactiveColor
-
 - (void)saveDiskDisplayMode:(int)mode {
     [self saveIntPref:kDiskDisplayModePref value:mode];
 } // saveDiskDisplayMode
 
-- (void)saveDiskThroughputLabel:(BOOL)label {
-    [self saveBoolPref:kDiskThroughputLabelPref value:label];
-} // saveDiskThroughputLabel
-
 - (void)saveDiskSelectedPhysicalDisks:(NSArray *)disks {
     [[NSUserDefaults standardUserDefaults] setObject:disks forKey:kDiskSelectedPhysicalDisksPref];
 } // saveDiskSelectedPhysicalDisks
-
-- (void)saveDiskReadColor:(NSColor *)color {
-    [self saveColorPref:kDiskReadColorPref value:color];
-} // saveDiskReadColor
-
-- (void)saveDiskWriteColor:(NSColor *)color {
-    [self saveColorPref:kDiskWriteColorPref value:color];
-} // saveDiskWriteColor
-
-- (void)saveDiskInactiveColor:(NSColor *)color {
-    [self saveColorPref:kDiskInactiveColorPref value:color];
-} // saveDiskInactiveColor
 
 ///////////////////////////////////////////////////////////////
 //
@@ -646,9 +610,10 @@
 } // netInterval
 
 - (int)netDisplayMode {
-	return [self loadBitFlagPref:kNetDisplayModePref
-					  validFlags:(kNetDisplayThroughput | kNetDisplayGraph | kNetDisplayArrows)
-					defaultValue:kNetDisplayDefault];
+	int mode = [self loadBitFlagPref:kNetDisplayModePref
+						  validFlags:(kNetDisplayThroughput | kNetDisplayGraph | kNetDisplayArrows)
+						defaultValue:kNetDisplayDefault];
+	return mode ?: kNetDisplayDefault;
 } // netDisplayMode
 
 - (int)netDisplayOrientation {
@@ -787,7 +752,8 @@
 		returnVal = [prefValue doubleValue];
 		// Floating point comparison needs some margin of error. Scale up
 		// and truncate
-		if ((floor(returnVal * 100) < floor(lowBound * 100)) ||
+		if (!isfinite(returnVal) ||
+			(floor(returnVal * 100) < floor(lowBound * 100)) ||
 			(ceil(returnVal * 100) > ceil(highBound * 100))) {
 			returnVal = defaultValue;
 			[self saveDoublePref:prefName value:returnVal];
@@ -805,8 +771,9 @@
 		  highBound:(int)highBound defaultValue:(int)defaultValue {
 
     int returnValue=defaultValue;
-    if([[NSUserDefaults standardUserDefaults] objectForKey:prefName]){
-        returnValue=(int)[[NSUserDefaults standardUserDefaults] integerForKey:prefName];
+    id prefValue = [[NSUserDefaults standardUserDefaults] objectForKey:prefName];
+    if([prefValue isKindOfClass:[NSNumber class]]){
+        returnValue=(int)[prefValue integerValue];
     }
     if(returnValue > highBound || returnValue < lowBound){
         returnValue = defaultValue;
@@ -821,8 +788,9 @@
 
 - (int)loadBitFlagPref:(NSString *)prefName validFlags:(int)flags defaultValue:(int)defaultValue {
 
-    if([[NSUserDefaults standardUserDefaults] objectForKey:prefName]){
-        int returnValue=(int)[[NSUserDefaults standardUserDefaults] integerForKey:prefName];
+    id prefValue = [[NSUserDefaults standardUserDefaults] objectForKey:prefName];
+    if([prefValue isKindOfClass:[NSNumber class]]){
+        int returnValue=(int)[prefValue integerValue];
         if (((returnValue | flags) == flags)) {
             return returnValue;
         }
@@ -831,14 +799,11 @@
 
 } // _loadBitFlagPref
 
-- (void)saveBitFlagPref:(NSString *)prefName value:(int)value {
-    [[NSUserDefaults standardUserDefaults] setInteger:value forKey:prefName];
-} // _saveBitFlagPref
-
 - (BOOL)loadBoolPref:(NSString *)prefName defaultValue:(BOOL)defaultValue {
 
-    if([[NSUserDefaults standardUserDefaults] objectForKey:prefName]){
-        return [[NSUserDefaults standardUserDefaults] boolForKey:prefName];
+    id prefValue = [[NSUserDefaults standardUserDefaults] objectForKey:prefName];
+    if([prefValue isKindOfClass:[NSNumber class]]){
+        return [prefValue boolValue];
     }
     return defaultValue;
 } // _loadBoolPref

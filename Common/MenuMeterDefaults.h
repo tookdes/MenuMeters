@@ -55,7 +55,6 @@
 - (NSColor *)cpuSystemColor;
 - (NSColor *)cpuUserColor;
 - (NSColor *)cpuTemperatureColor;
-- (NSColor *)cpuPowerColor;
 - (void)saveCpuInterval:(double)interval;
 - (void)saveCpuDisplayMode:(int)mode;
 - (void)saveCpuPercentDisplay:(int)mode;
@@ -73,7 +72,6 @@
 - (void)saveCpuSystemColor:(NSColor *)color;
 - (void)saveCpuUserColor:(NSColor *)color;
 - (void)saveCpuTemperatureColor:(NSColor *)color;
-- (void)saveCpuPowerColor:(NSColor *)color;
 - (void)saveCpuTemperatureUnit:(int)unit;
 - (void)saveCpuTemperatureSensor:(NSString*)name;
 
@@ -104,17 +102,9 @@
 - (void)saveDiskImageset:(int)imageset;
 - (void)saveDiskSelectMode:(int)mode;
 - (int)diskDisplayMode;
-- (BOOL)diskThroughputLabel;
 - (NSArray *)diskSelectedPhysicalDisks;
-- (NSColor *)diskReadColor;
-- (NSColor *)diskWriteColor;
-- (NSColor *)diskInactiveColor;
 - (void)saveDiskDisplayMode:(int)mode;
-- (void)saveDiskThroughputLabel:(BOOL)label;
 - (void)saveDiskSelectedPhysicalDisks:(NSArray *)disks;
-- (void)saveDiskReadColor:(NSColor *)color;
-- (void)saveDiskWriteColor:(NSColor *)color;
-- (void)saveDiskInactiveColor:(NSColor *)color;
 
 // Mem menu prefs
 - (double)memInterval;

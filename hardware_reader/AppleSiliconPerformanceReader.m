@@ -52,9 +52,10 @@ extern int64_t IOReportStateGetResidency(CFDictionaryRef item, int32_t idx);
     IOReportSubscriptionRef subscription;
     CFMutableDictionaryRef channels;
     CFDictionaryRef previousSample;
-    NSDate *previousSampleDate;
+    NSTimeInterval previousSampleTime;
     AppleSiliconPerformanceSample *cachedSample;
-    NSDate *cachedSampleDate;
+    NSTimeInterval cachedSampleTime;
+    NSTimeInterval lastInitializationAttempt;
     uint32_t gpuFrequencies[64];
     int gpuFrequencyCount;
 }
@@ -74,6 +75,9 @@ extern int64_t IOReportStateGetResidency(CFDictionaryRef item, int32_t idx);
     if (previousSample) {
         CFRelease(previousSample);
     }
+    if (subscription) {
+        CFRelease(subscription);
+    }
     if (channels) {
         CFRelease(channels);
     }
@@ -91,7 +95,7 @@ static BOOL MMGetCString(CFStringRef string, char *buffer, size_t size)
 static double MMEnergyToWatts(int64_t energy, CFStringRef unitRef, NSTimeInterval elapsedSeconds)
 {
     if (elapsedSeconds <= 0.0) {
-        elapsedSeconds = 1.0;
+        return 0.0;
     }
 
     double rate = (double)energy / elapsedSeconds;
@@ -239,12 +243,36 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
     if (initialized) {
         return available;
     }
-    initialized = YES;
+
+    NSTimeInterval now = [NSProcessInfo processInfo].systemUptime;
+    if (lastInitializationAttempt > 0.0 && now - lastInitializationAttempt < 1.0) {
+        return NO;
+    }
+    lastInitializationAttempt = now;
+
+    if (previousSample) {
+        CFRelease(previousSample);
+        previousSample = NULL;
+    }
+    if (subscription) {
+        CFRelease(subscription);
+        subscription = NULL;
+    }
+    if (channels) {
+        CFRelease(channels);
+        channels = NULL;
+    }
 
     CFDictionaryRef energyChannels = IOReportCopyChannelsInGroup(CFSTR("Energy Model"), NULL, 0, 0, 0);
     MMMergeChannels(&channels, energyChannels);
     if (energyChannels) {
         CFRelease(energyChannels);
+    }
+
+    CFDictionaryRef energyCounterChannels = IOReportCopyChannelsInGroup(CFSTR("Energy Counters"), NULL, 0, 0, 0);
+    MMMergeChannels(&channels, energyCounterChannels);
+    if (energyCounterChannels) {
+        CFRelease(energyCounterChannels);
     }
 
     CFDictionaryRef gpuChannels = IOReportCopyChannelsInGroup(CFSTR("GPU Stats"), NULL, 0, 0, 0);
@@ -271,13 +299,22 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
     }
     if (!subscription) {
         available = NO;
+        CFRelease(channels);
+        channels = NULL;
         return NO;
     }
 
     [self loadGPUFrequencies];
     previousSample = IOReportCreateSamples(subscription, channels, NULL);
-    previousSampleDate = [NSDate date];
+    previousSampleTime = now;
     available = previousSample != NULL;
+    initialized = available;
+    if (!available) {
+        CFRelease(subscription);
+        subscription = NULL;
+        CFRelease(channels);
+        channels = NULL;
+    }
     return available;
 }
 
@@ -296,8 +333,8 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
     sample.gpuSRAMPowerWatts = 0.0;
     sample.anePowerWatts = -1.0;
 
-    NSDate *requestDate = [NSDate date];
-    if (cachedSample && cachedSampleDate && [requestDate timeIntervalSinceDate:cachedSampleDate] < 0.2) {
+    NSTimeInterval requestTime = [NSProcessInfo processInfo].systemUptime;
+    if (cachedSample && cachedSampleTime > 0.0 && requestTime - cachedSampleTime < 0.2) {
         return cachedSample;
     }
 
@@ -306,54 +343,56 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
     }
 
     CFDictionaryRef currentSample = IOReportCreateSamples(subscription, channels, NULL);
-    NSDate *currentDate = requestDate;
+    NSTimeInterval currentTime = requestTime;
     if (!currentSample) {
         cachedSample = sample;
-        cachedSampleDate = currentDate;
+        cachedSampleTime = currentTime;
         return sample;
     }
 
-    if (!previousSample || !previousSampleDate) {
+    if (!previousSample || previousSampleTime <= 0.0) {
         if (previousSample) {
             CFRelease(previousSample);
         }
         previousSample = currentSample;
-        previousSampleDate = currentDate;
+        previousSampleTime = currentTime;
         cachedSample = sample;
-        cachedSampleDate = currentDate;
+        cachedSampleTime = currentTime;
         return sample;
     }
 
-    NSTimeInterval elapsed = [currentDate timeIntervalSinceDate:previousSampleDate];
+    NSTimeInterval elapsed = currentTime - previousSampleTime;
     CFDictionaryRef delta = IOReportCreateSamplesDelta(previousSample, currentSample, NULL);
     CFRelease(previousSample);
     previousSample = currentSample;
-    previousSampleDate = currentDate;
+    previousSampleTime = currentTime;
 
     if (!delta) {
         cachedSample = sample;
-        cachedSampleDate = currentDate;
+        cachedSampleTime = currentTime;
         return sample;
     }
 
     CFArrayRef reportChannels = CFDictionaryGetValue(delta, CFSTR("IOReportChannels"));
     CFIndex count = MMIsType(reportChannels, CFArrayGetTypeID()) ? CFArrayGetCount(reportChannels) : 0;
     BOOL foundAnyMetric = NO;
-    BOOL hasModelCPUAggregate = NO;
-    BOOL hasModelCPUCluster = NO;
-    BOOL hasModelGPUCore = NO;
-    BOOL hasModelGPUFallback = NO;
+    BOOL hasModelCPUTotal = NO;
+    BOOL hasModelCPUTyped = NO;
+    BOOL hasModelGPUNamed = NO;
+    BOOL hasModelGPUAlias = NO;
     BOOL hasModelGPUSRAM = NO;
-    BOOL hasModelANE = NO;
+    BOOL hasModelANEBlock = NO;
+    BOOL hasModelANENamed = NO;
     BOOL hasPMPGPUCore = NO;
     BOOL hasPMPGPUSRAM = NO;
     BOOL hasPMPANE = NO;
-    double modelCPUAggregateWatts = 0.0;
-    double modelCPUClusterWatts = 0.0;
-    double modelGPUCoreWatts = 0.0;
-    double modelGPUFallbackWatts = 0.0;
+    double modelCPUTotalWatts = 0.0;
+    double modelCPUTypedWatts = 0.0;
+    double modelGPUNamedWatts = 0.0;
+    double modelGPUAliasWatts = 0.0;
     double modelGPUSRAMWatts = 0.0;
-    double modelANEWatts = 0.0;
+    double modelANEBlockWatts = 0.0;
+    double modelANENamedWatts = 0.0;
     double pmpGPUCoreWatts = 0.0;
     double pmpGPUSRAMWatts = 0.0;
     double pmpANEWatts = 0.0;
@@ -369,27 +408,37 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
         MMGetCString(IOReportChannelGetGroup(item), group, sizeof(group));
         MMGetCString(IOReportChannelGetChannelName(item), channel, sizeof(channel));
 
-        if (strcmp(group, "Energy Model") == 0) {
+        if (strcmp(group, "Energy Model") == 0 || strcmp(group, "Energy Counters") == 0) {
             int64_t energy = IOReportSimpleGetIntegerValue(item, 0);
-            double watts = MMEnergyToWatts(energy, IOReportChannelGetUnitLabel(item), elapsed);
-            if (MMChannelNameEquals(channel, "CPU Energy")) {
-                modelCPUAggregateWatts = MAX(0.0, watts);
-                hasModelCPUAggregate = YES;
-            } else if (MMIsCPUEnergyClusterChannel(channel)) {
-                modelCPUClusterWatts += MAX(0.0, watts);
-                hasModelCPUCluster = YES;
+            double watts = MAX(0.0, MMEnergyToWatts(energy, IOReportChannelGetUnitLabel(item), elapsed));
+            BOOL typedCPU = MMIsCPUEnergyClusterChannel(channel) ||
+                strstr(channel, "ECPU Energy") || strstr(channel, "PCPU Energy") ||
+                strstr(channel, "MCPU Energy") || strstr(channel, "eCPUs Energy") ||
+                strstr(channel, "pCPUs Energy") || strstr(channel, "mCPUs Energy");
+            if (typedCPU) {
+                modelCPUTypedWatts += watts;
+                hasModelCPUTyped = YES;
+            } else if (strstr(channel, "CPU Energy")) {
+                modelCPUTotalWatts += watts;
+                hasModelCPUTotal = YES;
             } else if (MMChannelNameEquals(channel, "GPU Energy")) {
-                modelGPUCoreWatts = MAX(0.0, watts);
-                hasModelGPUCore = YES;
+                modelGPUNamedWatts += watts;
+                hasModelGPUNamed = YES;
             } else if (MMChannelNameEquals(channel, "GPU")) {
-                modelGPUFallbackWatts = MAX(0.0, watts);
-                hasModelGPUFallback = YES;
-            } else if (MMChannelNameEquals(channel, "GPU SRAM")) {
-                modelGPUSRAMWatts = MAX(0.0, watts);
+                modelGPUAliasWatts += watts;
+                hasModelGPUAlias = YES;
+            } else if (strncmp(channel, "GPU SRAM", 8) == 0) {
+                modelGPUSRAMWatts += watts;
                 hasModelGPUSRAM = YES;
-            } else if (MMChannelNameEquals(channel, "ANE")) {
-                modelANEWatts = MAX(0.0, watts);
-                hasModelANE = YES;
+            } else if (strstr(channel, "ANE") || strstr(channel, "NPU") ||
+                       strstr(channel, "Neural") || strstr(channel, "ane")) {
+                if (strstr(channel, "Energy") || MMChannelNameEquals(channel, "ANE")) {
+                    modelANENamedWatts += watts;
+                    hasModelANENamed = YES;
+                } else {
+                    modelANEBlockWatts += watts;
+                    hasModelANEBlock = YES;
+                }
             }
         } else if (strcmp(group, "PMP") == 0) {
             char subgroup[128] = {0};
@@ -397,15 +446,15 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
             if (strcmp(subgroup, "Energy Counters") == 0 || strcmp(subgroup, "Energy") == 0) {
                 int64_t energy = IOReportSimpleGetIntegerValue(item, 0);
                 double watts = MMEnergyToWatts(energy, IOReportChannelGetUnitLabel(item), elapsed);
-                if (MMChannelNameEquals(channel, "ANE")) {
-                    pmpANEWatts = MAX(0.0, watts);
+                if (strncmp(channel, "ANE", 3) == 0 || strstr(channel, "NPU")) {
+                    pmpANEWatts += MAX(0.0, watts);
                     hasPMPANE = YES;
-                } else if (MMChannelNameEquals(channel, "GPU") || MMChannelNameEquals(channel, "AGX")) {
-                    pmpGPUCoreWatts = MAX(0.0, watts);
-                    hasPMPGPUCore = YES;
-                } else if (MMChannelNameEquals(channel, "GPU SRAM") || MMChannelNameEquals(channel, "AGX SRAM")) {
-                    pmpGPUSRAMWatts = MAX(0.0, watts);
+                } else if (strncmp(channel, "GPU SRAM", 8) == 0 || strncmp(channel, "AGX SRAM", 8) == 0) {
+                    pmpGPUSRAMWatts += MAX(0.0, watts);
                     hasPMPGPUSRAM = YES;
+                } else if (MMChannelNameEquals(channel, "GPU") || MMChannelNameEquals(channel, "AGX")) {
+                    pmpGPUCoreWatts += MAX(0.0, watts);
+                    hasPMPGPUCore = YES;
                 }
             }
         } else if (strcmp(group, "GPU Stats") == 0) {
@@ -446,18 +495,18 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
         }
     }
 
-    if (hasModelCPUAggregate) {
-        sample.cpuPowerWatts = modelCPUAggregateWatts;
+    if (hasModelCPUTotal) {
+        sample.cpuPowerWatts = modelCPUTotalWatts;
         foundAnyMetric = YES;
-    } else if (hasModelCPUCluster) {
-        sample.cpuPowerWatts = modelCPUClusterWatts;
+    } else if (hasModelCPUTyped) {
+        sample.cpuPowerWatts = modelCPUTypedWatts;
         foundAnyMetric = YES;
     }
-    if (hasModelGPUCore) {
-        sample.gpuPowerWatts = modelGPUCoreWatts;
+    if (hasModelGPUNamed) {
+        sample.gpuPowerWatts = modelGPUNamedWatts;
         foundAnyMetric = YES;
-    } else if (hasModelGPUFallback) {
-        sample.gpuPowerWatts = modelGPUFallbackWatts;
+    } else if (hasModelGPUAlias) {
+        sample.gpuPowerWatts = modelGPUAliasWatts;
         foundAnyMetric = YES;
     } else if (hasPMPGPUCore) {
         sample.gpuPowerWatts = pmpGPUCoreWatts;
@@ -470,8 +519,11 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
         sample.gpuSRAMPowerWatts = pmpGPUSRAMWatts;
         foundAnyMetric = YES;
     }
-    if (hasModelANE) {
-        sample.anePowerWatts = modelANEWatts;
+    if (hasModelANEBlock) {
+        sample.anePowerWatts = modelANEBlockWatts;
+        foundAnyMetric = YES;
+    } else if (hasModelANENamed) {
+        sample.anePowerWatts = modelANENamedWatts;
         foundAnyMetric = YES;
     } else if (hasPMPANE) {
         sample.anePowerWatts = pmpANEWatts;
@@ -481,7 +533,7 @@ static void MMMergeChannels(CFMutableDictionaryRef *destination, CFDictionaryRef
     CFRelease(delta);
     sample.available = foundAnyMetric;
     cachedSample = sample;
-    cachedSampleDate = currentDate;
+    cachedSampleTime = currentTime;
     return sample;
 }
 

@@ -128,7 +128,11 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
 
 } // init
 
- // dealloc
+- (void)dealloc {
+	if (selfHost) {
+		mach_port_deallocate(mach_task_self(), selfHost);
+	}
+}
 
 
 ///////////////////////////////////////////////////////////////
@@ -475,7 +479,8 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
     error = syscall(SYS_memorystatus_get_level, &level);
     if(error){
         NSLog(@"memorystatus_get_level failed: error=%@ errorno=%@ (%s)",@(error),@(errno),strerror(errno));
+		return 0;
     }
-    return level;
+	return MIN(100, MAX(0, 100 - level));
 }
 @end

@@ -32,6 +32,7 @@
 
 // PPP local socket path
 #define kPPPSocketPath	 	"/var/run/pppconfd\0"
+#define kPPPSocketTimeoutMicroseconds 250000
 
 // Typedef for PPP messages, from Apple PPPLib
 struct ppp_msg_hdr {
@@ -97,6 +98,8 @@ struct ppp_status {
 
 - (uint32_t)pppconfdLinkCount;
 - (NSData *)pppconfdExecMessage:(NSData *)message;
+- (BOOL)openPPPSocket;
+- (void)closePPPSocket;
 
 @end
 
@@ -137,27 +140,9 @@ static id gSharedPPP = nil;
 	}
 	pppconfdSocket = -1;
 
-	// Establish or connection to the PPP socket
-	pppconfdSocket = socket(AF_LOCAL, SOCK_STREAM, 0);
-	if (pppconfdSocket < 0) {
-		NSLog(@"MenuMeterNetPPP unable to establish socket for pppconfd. Abort.");
-		return nil;
-	}
-	struct sockaddr_un socketaddr = { 0, AF_LOCAL, kPPPSocketPath };
-	if (connect(pppconfdSocket, (struct sockaddr *)&socketaddr, (socklen_t)sizeof(socketaddr))) {
-		NSLog(@"MenuMeterNetPPP unable to establish socket for pppconfd. Abort.");
-		close(pppconfdSocket);
-		pppconfdSocket = -1;
-		return nil;
-	}
-
-	// Create the filehandle
-	pppconfdHandle = [[NSFileHandle alloc] initWithFileDescriptor:pppconfdSocket closeOnDealloc:NO];
-	if (!pppconfdHandle) {
-		NSLog(@"MenuMeterNetPPP unable to establish file handle for pppconfd. Abort.");
-		close(pppconfdSocket);
-		pppconfdSocket = -1;
-		return nil;
+	// Establish our initial connection, but keep the singleton alive so it can retry later.
+	if (![self openPPPSocket]) {
+		NSLog(@"MenuMeterNetPPP unable to establish socket for pppconfd. Will retry on demand.");
 	}
 
 	// Send on back
@@ -167,7 +152,7 @@ static id gSharedPPP = nil;
 
 - (void)dealloc {
 
-	if (pppconfdSocket >= 0) close(pppconfdSocket);
+	[self closePPPSocket];
 
 } // dealloc
 
@@ -348,7 +333,13 @@ static id gSharedPPP = nil;
 } // pppconfdLinkCount
 
 - (NSData *)pppconfdExecMessage:(NSData *)message {
-	if (!pppconfdHandle || !message) return nil;
+	if (!message) return nil;
+	NSTimeInterval now = [NSProcessInfo processInfo].systemUptime;
+	if (retryAfter > now) return nil;
+	if (!pppconfdHandle && ![self openPPPSocket]) {
+		retryAfter = now + 1.0;
+		return nil;
+	}
 
 	// Write the data
 	@try {
@@ -357,6 +348,9 @@ static id gSharedPPP = nil;
 		NSData *header = [pppconfdHandle readDataOfLength:sizeof(struct ppp_msg_hdr)];
 		if ([header length] == sizeof(struct ppp_msg_hdr)) {
 			struct ppp_msg_hdr *header_message = (struct ppp_msg_hdr *)[header bytes];
+			if (header_message && !header_message->m_result && !header_message->m_len) {
+				return [NSData data];
+			}
 			if (header_message && header_message->m_len) {
 				NSData *reply = [pppconfdHandle readDataOfLength:header_message->m_len];
 				if ([reply length] == header_message->m_len && !header_message->m_result) {
@@ -365,12 +359,47 @@ static id gSharedPPP = nil;
 			}
 		}
 	} @catch (NSException *exception) {
-		return nil;
 	}
 
 	// Get here we got nothing
+	[self closePPPSocket];
+	retryAfter = [NSProcessInfo processInfo].systemUptime + 1.0;
 	return nil;
 
 } // pppconfdExecMessage
+
+- (BOOL)openPPPSocket {
+	[self closePPPSocket];
+	pppconfdSocket = socket(AF_LOCAL, SOCK_STREAM, 0);
+	if (pppconfdSocket < 0) return NO;
+
+	struct timeval timeout = { 0, kPPPSocketTimeoutMicroseconds };
+	if (setsockopt(pppconfdSocket, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) ||
+		setsockopt(pppconfdSocket, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout))) {
+		[self closePPPSocket];
+		return NO;
+	}
+
+	struct sockaddr_un socketaddr = { 0, AF_LOCAL, kPPPSocketPath };
+	if (connect(pppconfdSocket, (struct sockaddr *)&socketaddr, (socklen_t)sizeof(socketaddr))) {
+		[self closePPPSocket];
+		return NO;
+	}
+
+	pppconfdHandle = [[NSFileHandle alloc] initWithFileDescriptor:pppconfdSocket closeOnDealloc:NO];
+	if (!pppconfdHandle) {
+		[self closePPPSocket];
+		return NO;
+	}
+	return YES;
+}
+
+- (void)closePPPSocket {
+	pppconfdHandle = nil;
+	if (pppconfdSocket >= 0) {
+		close(pppconfdSocket);
+		pppconfdSocket = -1;
+	}
+}
 
 @end

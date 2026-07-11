@@ -58,6 +58,7 @@
 - (void)setupDiskPane;
 - (void)notifyAllMenuExtrasOfLayoutChange;
 - (NSString *)toolbarImageNameForItemIdentifier:(NSString *)identifier;
+- (NSString *)localizedPreferenceString:(NSString *)key;
 
 // System config framework
 - (void)connectSystemConfig;
@@ -111,7 +112,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     NSButton *gpuGraphToggle;
     NSButton *gpuFrequencyToggle;
     NSButton *gpuPowerToggle;
-    NSButton *gpuANEPowerToggle;
     NSButton *cpuPaneANEPowerToggle;
     NSSlider *gpuInterval;
     NSTextField *gpuIntervalDisplay;
@@ -128,9 +128,9 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     NSButton*b=sender;
     if([b state]==NSOnState){
         NSAlert*alert=[[NSAlert alloc] init];
-        alert.messageText=@"Using this feature for the first time will bring up two alerts by the system";
-        [alert addButtonWithTitle:@"OK"];
-        alert.informativeText=@"This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accesibility features.";
+        alert.messageText=[self localizedPreferenceString:@"Using this feature for the first time will bring up two alerts by the system"];
+        [alert addButtonWithTitle:NSLocalizedString(@"OK", nil)];
+        alert.informativeText=[self localizedPreferenceString:@"This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accessibility features."];
         [alert runModal];
     }
 }
@@ -322,28 +322,25 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     if (![defaults boolForKey:kMenuMetersLoginItemsMigratedPref]) {
-        [defaults setBool:YES forKey:kMenuMetersLoginItemsMigratedPref];
-        {
-            NSString*oldAppPath=[@"~/Library/PreferencePanes/MenuMeters.prefPane/Contents/Resources/MenuMetersApp.app" stringByExpandingTildeInPath];
-            EMCLoginItem*oldItem=[EMCLoginItem loginItemWithPath:oldAppPath];
-            if(oldItem.isLoginItem){
+        BOOL hadOldLoginItem = NO;
+        for (NSString *oldAppPath in @[
+            [@"~/Library/PreferencePanes/MenuMeters.prefPane/Contents/Resources/MenuMetersApp.app" stringByExpandingTildeInPath],
+            @"/Library/PreferencePanes/MenuMeters.prefPane/Contents/Resources/MenuMetersApp.app"
+        ]) {
+            EMCLoginItem *oldItem = [EMCLoginItem loginItemWithPath:oldAppPath];
+            if (oldItem.isLoginItem) {
+                hadOldLoginItem = YES;
                 [oldItem removeLoginItem];
             }
         }
-        {
-            NSString*oldAppPath=@"/Library/PreferencePanes/MenuMeters.prefPane/Contents/Resources/MenuMetersApp.app";
-            EMCLoginItem*oldItem=[EMCLoginItem loginItemWithPath:oldAppPath];
-            if(oldItem.isLoginItem){
-                [oldItem removeLoginItem];
-            }
-        }
-        system("killall MenuMetersApp");
-        {
+        if (hadOldLoginItem) {
+            system("killall MenuMetersApp");
             EMCLoginItem*thisItem=[EMCLoginItem loginItemWithBundle:[NSBundle mainBundle]];
             if(!thisItem.isLoginItem){
                 [thisItem addLoginItem];
             }
         }
+		[defaults setBool:YES forKey:kMenuMetersLoginItemsMigratedPref];
 	}
 	} // mainViewDidLoad
 
@@ -520,12 +517,12 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
                                        frame:NSMakeRect(305, 521, 95, 22)
                                       action:@selector(cpuPrefChange:)];
     [cpuView addSubview:cpuPowerToggle];
-#endif
 
     cpuPaneANEPowerToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"ANE Power"]
                                               frame:NSMakeRect(412, 521, 125, 22)
                                              action:@selector(gpuPrefChange:)];
     [cpuView addSubview:cpuPaneANEPowerToggle];
+#endif
 }
 
 
@@ -550,10 +547,8 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     for (NSView *sub in diskView.subviews) {
         if ([sub isKindOfClass:[NSTextField class]]) {
             NSTextField *tf = (NSTextField *)sub;
-            if ([tf.stringValue containsString:@"Option"] || [tf.stringValue containsString:@"Selecting"]) {
-                if (tf.frame.origin.y > 380) {
-                    tf.frame = NSMakeRect(tf.frame.origin.x, tf.frame.origin.y - 44, tf.frame.size.width, tf.frame.size.height);
-                }
+            if (tf.frame.origin.y >= 380 && tf.frame.origin.y < 430) {
+                tf.frame = NSMakeRect(tf.frame.origin.x, tf.frame.origin.y - 44, tf.frame.size.width, tf.frame.size.height);
             }
         }
     }
@@ -564,6 +559,8 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 
     diskPhysicalDiskSelector = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(50, 280, 400, 26) pullsDown:NO];
     [diskPhysicalDiskSelector setAutoenablesItems:NO];
+    [diskPhysicalDiskSelector setTarget:self];
+    [diskPhysicalDiskSelector setAction:@selector(diskPrefChange:)];
     [diskView addSubview:diskPhysicalDiskSelector];
 
 
@@ -573,20 +570,33 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 - (void)updateDiskPhysicalDiskSelector {
     MenuMeterDiskIO *io = [[MenuMeterDiskIO alloc] init];
     NSArray *disks = [io physicalDiskList];
-    NSArray *selected = [ourPrefs diskSelectedPhysicalDisks];
-    [diskPhysicalDiskSelector removeAllItems];
-    [diskPhysicalDiskSelector addItemWithTitle:[self localizedPreferenceString:@"All Internal Disks (default)"]];
-    [[diskPhysicalDiskSelector lastItem] setToolTip:@"internal-default"];
+    NSMutableArray *selected = [[ourPrefs diskSelectedPhysicalDisks] mutableCopy];
+    BOOL migratedSelection = NO;
     for (NSDictionary *disk in disks) {
         NSString *bsd = disk[@"bsdName"];
+        NSString *identifier = disk[@"identifier"] ?: bsd;
+        if (![identifier isEqualToString:bsd] && [selected containsObject:bsd]) {
+            [selected removeObject:bsd];
+            if (![selected containsObject:identifier]) [selected addObject:identifier];
+            migratedSelection = YES;
+        }
+    }
+    if (migratedSelection) [ourPrefs saveDiskSelectedPhysicalDisks:selected];
+    [diskPhysicalDiskSelector removeAllItems];
+    [diskPhysicalDiskSelector addItemWithTitle:[self localizedPreferenceString:@"All Internal Disks (default)"]];
+    [[diskPhysicalDiskSelector lastItem] setState:selected.count == 0 ? NSOnState : NSOffState];
+    for (NSDictionary *disk in disks) {
+        NSString *bsd = disk[@"bsdName"];
+        NSString *identifier = disk[@"identifier"] ?: bsd;
         NSString *name = disk[@"displayName"];
         BOOL isInternal = [disk[@"isInternal"] boolValue];
         NSString *diskLabel = [NSString stringWithFormat:@"%@ (%@) %@",
-                           name, bsd, isInternal ? @"Internal" : @"External"];
+                           name, bsd, [self localizedPreferenceString:isInternal ? @"Internal" : @"External"]];
         [diskPhysicalDiskSelector addItemWithTitle:diskLabel];
         NSMenuItem *item = [diskPhysicalDiskSelector lastItem];
+        [item setRepresentedObject:identifier];
         [item setToolTip:bsd];
-        [item setState:[selected containsObject:bsd] ? NSOnState : NSOffState];
+        [item setState:([selected containsObject:identifier] || [selected containsObject:bsd]) ? NSOnState : NSOffState];
     }
     [diskDisplayMode selectItemAtIndex:-1];
     [diskDisplayMode selectItemAtIndex:[ourPrefs diskDisplayMode] - 1];
@@ -1107,15 +1117,20 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 		[ourPrefs saveDiskSelectMode:(int)[diskSelectMode indexOfSelectedItem]];
 	} else if (sender == diskPhysicalDiskSelector) {
 		NSInteger idx = [diskPhysicalDiskSelector indexOfSelectedItem];
-		if (idx > 0) {
-			NSString *bsd = [[diskPhysicalDiskSelector selectedItem] toolTip];
-			NSMutableArray *selected = [[ourPrefs diskSelectedPhysicalDisks] mutableCopy];
-			if (!selected) selected = [NSMutableArray array];
-			if ([selected containsObject:bsd]) {
-				[selected removeObject:bsd];
-			} else {
-				[selected addObject:bsd];
-			}
+        if (idx == 0) {
+            [ourPrefs saveDiskSelectedPhysicalDisks:@[]];
+        } else {
+            NSMenuItem *item = [diskPhysicalDiskSelector selectedItem];
+            NSString *identifier = item.representedObject;
+            NSString *bsd = item.toolTip;
+            NSMutableArray *selected = [[ourPrefs diskSelectedPhysicalDisks] mutableCopy];
+            if (!selected) selected = [NSMutableArray array];
+            if ([selected containsObject:identifier] || [selected containsObject:bsd]) {
+                [selected removeObject:identifier];
+                [selected removeObject:bsd];
+            } else {
+                [selected addObject:identifier];
+            }
 			[ourPrefs saveDiskSelectedPhysicalDisks:selected];
 		}
 	}
@@ -1327,7 +1342,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 		}
 		if (!foundBetterItem) {
 			[netPreferInterface selectItemAtIndex:0];
-			[ourPrefs saveNetPreferInterface:kNetPrimaryInterface];
 		}
 	}
 
@@ -1486,7 +1500,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	NSMenu *popupMenu = [netPreferInterface menu];
 	if (!popupMenu) {
 		[netPreferInterface selectItemAtIndex:0];
-		[self netPrefChange:netPreferInterface];
 		return;
 	}
 
@@ -1494,14 +1507,12 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	NSDictionary *ipDict = [self sysconfigValueForKey:@"Setup:/Network/Global/IPv4"];
 	if (!ipDict) {
 		[netPreferInterface selectItemAtIndex:0];
-		[self netPrefChange:netPreferInterface];
 		return;
 	}
 	// Get the array of services
 	NSArray *serviceArray = [ipDict objectForKey:@"ServiceOrder"];
 	if (!serviceArray) {
 		[netPreferInterface selectItemAtIndex:0];
-		[self netPrefChange:netPreferInterface];
 		return;
 	}
 
@@ -1530,13 +1541,13 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 			pppName = [pppDict objectForKey:@"InterfaceName"];
 		}
 		// Now we can try to build the item
-		if (!shortName) continue;  // Nothing to key off, bail
-		if (!longName) longName = @"Unknown Interface";
 		if (!shortName && pppName) {
 			// Swap pppName for short name
 			shortName = pppName;
 			pppName = nil;
 		}
+		if (!shortName) continue;  // Nothing to key off, bail
+		if (!longName) longName = @"Unknown Interface";
 		if (longName && shortName && pppName) {
 			NSMenuItem *newMenuItem = (NSMenuItem *)[popupMenu addItemWithTitle:
 														[NSString stringWithFormat:@"%@ (%@, %@)", longName, shortName, pppName]
@@ -1565,7 +1576,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 		selectIndex = 0;
 	}
 	[netPreferInterface selectItemAtIndex:selectIndex];
-	[self netPrefChange:netPreferInterface];
 
 } // updateNetInterfaceMenu
 

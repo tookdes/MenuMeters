@@ -17,6 +17,8 @@
 "Menu bar horizontal padding:" = "Menu bar horizontal padding:";
 "Colors" = "Colors";
 "Text" = "Text";
+"Please move MenuMeters to Applications" = "Please move MenuMeters to Applications";
+"MenuMeters cannot reliably launch at login from a read-only volume. Move it to /Applications, then open it again." = "MenuMeters cannot reliably launch at login from a read-only volume. Move it to /Applications, then open it again.";
 //	In the interest of improving localizability most strings in MenuMeters
 //	are exposed as NSString format strings, including the %1$, %2$ parameter placement
 //	convention. If localization requires different ordering of the parameters you
@@ -241,3 +243,7 @@
 
 // Miscellaneous error strings
 "No Active Interfaces" = "No Active Interfaces";
+"Internal" = "Internal";
+"External" = "External";
+"Using this feature for the first time will bring up two alerts by the system" = "Using this feature for the first time will bring up two alerts by the system";
+"This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accessibility features." = "This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accessibility features.";

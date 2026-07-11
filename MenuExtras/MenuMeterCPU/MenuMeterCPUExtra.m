@@ -254,8 +254,16 @@
 	if (![loadHistory count]) return NO;
 
 
-    uint32_t cpuCount=[cpuInfo numberOfCPUs];
-    uint32_t stride=[ourPrefs cpuAvgLowerHalfProcs]?[cpuInfo numberOfCPUs]/[cpuInfo numberOfCores]:1;
+    uint32_t cpuCount = [cpuInfo numberOfCPUs];
+    uint32_t stride = 1;
+    uint32_t displayedCPUCount = cpuCount;
+    if ([ourPrefs cpuAvgAllProcs]) {
+        displayedCPUCount = 1;
+    } else if ([ourPrefs cpuAvgLowerHalfProcs]) {
+        uint32_t coreCount = [cpuInfo numberOfCores];
+        stride = coreCount ? MAX(1U, cpuCount / coreCount) : 1;
+        displayedCPUCount = (cpuCount + stride - 1) / stride;
+    }
     float renderOffset = 0.0f;
     // Horizontal CPU thermometer is handled differently because it has to
     // manage rows and columns in a very different way from normal horizontal
@@ -286,7 +294,7 @@
         // Calculate the minimum number of columns that will be needed
         uint32_t rowCount = [ourPrefs cpuHorizontalRows];
         //ceil(A/B) for ints is equal (A+B-1)/B
-        uint32_t columnCount = (cpuCount+rowCount-1)/rowCount;
+        uint32_t columnCount = (displayedCPUCount + rowCount - 1) / rowCount;
             //((cpuCount - 1) / [ourPrefs cpuHorizontalRows]) + 1;
         // Calculate a column width
         float columnWidth = (menuWidth - renderOffset - 1.0f) / columnCount;
@@ -294,10 +302,11 @@
         float imageHeight = self.imageHeight;
         // Calculate a thermometer height
         float thermometerHeight = ((imageHeight - 2) / rowCount);
-        for (uint32_t cpuNum = 0; cpuNum < cpuCount; cpuNum+=stride) {
-            float xOffset = renderOffset + ((cpuNum / rowCount) * columnWidth) + 1.0f;
+        uint32_t displayIndex = 0;
+        for (uint32_t cpuNum = 0; cpuNum < cpuCount && displayIndex < displayedCPUCount; cpuNum += stride, displayIndex++) {
+            float xOffset = renderOffset + ((displayIndex / rowCount) * columnWidth) + 1.0f;
             float yOffset = (imageHeight -
-                             (((cpuNum % rowCount) + 1) * thermometerHeight)) - 1.0f;
+                             (((displayIndex % rowCount) + 1) * thermometerHeight)) - 1.0f;
             [self renderHorizontalThermometerForProcessor:cpuNum atX:xOffset andY:yOffset withWidth:columnWidth andHeight:thermometerHeight];
         }
     }

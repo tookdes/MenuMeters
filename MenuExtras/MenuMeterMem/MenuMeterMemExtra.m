@@ -312,7 +312,7 @@
 	NSString		*title = nil;
 
 	// Fetch stats
-	NSDictionary *currentMemStats = [memHistory objectAtIndex:0];
+	NSDictionary *currentMemStats = [memHistory lastObject];
 	if (!(currentMemStats && currentSwapStats)) return;
 
 	// Usage
@@ -362,14 +362,14 @@
         LiveUpdateMenuItemTitle(extraMenu, kMemMemPressureInfoMenuIndex, title);
     
 	// Swap count/path, Tiger swap encryptioninfo from Michael Nordmeyer (http://goodyworks.com)
-	if ([[currentSwapStats objectForKey:@"swapencrypted"] boolValue]) {
-		title = [NSString stringWithFormat:
-						(([[currentSwapStats objectForKey:@"swapcount"] unsignedIntValue] != 1) ?
-							[localizedStrings objectForKey:kMultiEncryptedSwapFormat] :
-							[localizedStrings objectForKey:kSingleEncryptedSwapFormat]),
-						[prettyIntFormatter stringForObjectValue:[currentSwapStats objectForKey:@"swapcount"]],
-						[currentSwapStats objectForKey:@"swappath"]];
-	}
+	BOOL encrypted = [[currentSwapStats objectForKey:@"swapencrypted"] boolValue];
+	BOOL multiple = [[currentSwapStats objectForKey:@"swapcount"] unsignedIntValue] != 1;
+	NSString *swapFormat = encrypted ?
+		(multiple ? [localizedStrings objectForKey:kMultiEncryptedSwapFormat] : [localizedStrings objectForKey:kSingleEncryptedSwapFormat]) :
+		(multiple ? [localizedStrings objectForKey:kMultiSwapFormat] : [localizedStrings objectForKey:kSingleSwapFormat]);
+	title = [NSString stringWithFormat:swapFormat,
+					[prettyIntFormatter stringForObjectValue:[currentSwapStats objectForKey:@"swapcount"]],
+					[currentSwapStats objectForKey:@"swappath"]];
 	LiveUpdateMenuItemTitle(extraMenu, kMemSwapCountInfoMenuIndex, title);
 	// Swap max
 	title = [NSString stringWithFormat:
@@ -396,7 +396,7 @@
 
 	// Load current stats
 	float totalMB = 1.0f, activeMB = 0, inactiveMB = 0, wireMB = 0, compressedMB = 0;
-	NSDictionary *currentMemStats = [memHistory objectAtIndex:0];
+	NSDictionary *currentMemStats = [memHistory lastObject];
 	if (currentMemStats) {
 		totalMB = [[currentMemStats objectForKey:@"totalmb"] floatValue];
 		activeMB = [[currentMemStats objectForKey:@"activemb"] floatValue];
@@ -487,7 +487,7 @@
 
 	// Read in the RAM data
 	double freeMB = 0, usedMB = 0;
-	NSDictionary *currentMemStats = [memHistory objectAtIndex:0];
+	NSDictionary *currentMemStats = [memHistory lastObject];
 	if (currentMemStats) {
 		freeMB = [[currentMemStats objectForKey:@"freemb"] doubleValue];
 		usedMB = [[currentMemStats objectForKey:@"usedmb"] doubleValue];
@@ -557,7 +557,7 @@
 - (void)renderPressureBar {
   // Load current stats
   float pressure = 0.2f;
-  NSDictionary *currentMemStats = [memHistory objectAtIndex:0];
+  NSDictionary *currentMemStats = [memHistory lastObject];
   if (currentMemStats) {
     pressure = [[currentMemStats objectForKey:@"mempress"] intValue] / 100.0f;
   }
@@ -584,7 +584,7 @@
 
 	// Load current stats
 	float totalMB = 1.0f, activeMB = 0, inactiveMB = 0, wireMB = 0, compressedMB = 0;
-	NSDictionary *currentMemStats = [memHistory objectAtIndex:0];
+	NSDictionary *currentMemStats = [memHistory lastObject];
 	if (currentMemStats) {
 		totalMB = [[currentMemStats objectForKey:@"totalmb"] floatValue];
 		activeMB = [[currentMemStats objectForKey:@"activemb"] floatValue];
@@ -711,11 +711,11 @@
 
 		// Update paths (adding baseline)
 		[inactivePath lineToPoint:NSMakePoint(renderPosition,
-											  (inactiveMB + compressedMB + activeMB + wireMB) > totalMB ? totalMB : ((inactiveMB + compressedMB + activeMB + wireMB) / totalMB) * renderHeight)];
+											  (inactiveMB + compressedMB + activeMB + wireMB) > totalMB ? renderHeight : ((inactiveMB + compressedMB + activeMB + wireMB) / totalMB) * renderHeight)];
 		[compressedPath lineToPoint:NSMakePoint(renderPosition,
-											  (compressedMB + activeMB + wireMB) > totalMB ? totalMB : ((compressedMB + activeMB + wireMB) / totalMB) * renderHeight)];
+											  (compressedMB + activeMB + wireMB) > totalMB ? renderHeight : ((compressedMB + activeMB + wireMB) / totalMB) * renderHeight)];
 		[activePath lineToPoint:NSMakePoint(renderPosition,
-											(activeMB + wireMB) > totalMB ? totalMB : ((activeMB + wireMB) / totalMB) * renderHeight)];
+											(activeMB + wireMB) > totalMB ? renderHeight : ((activeMB + wireMB) / totalMB) * renderHeight)];
 		[wirePath lineToPoint:NSMakePoint(renderPosition,
 										  wireMB / totalMB * renderHeight)];
 	}
@@ -746,7 +746,7 @@
 
 	// Read in the paging deltas
 	uint64_t pageIns = 0, pageOuts = 0;
-	NSDictionary *currentMemStats = [memHistory objectAtIndex:0];
+	NSDictionary *currentMemStats = [memHistory lastObject];
 	if (currentMemStats) {
 		pageIns = [[currentMemStats objectForKey:@"deltapageins"] unsignedLongLongValue];
 		pageOuts = [[currentMemStats objectForKey:@"deltapageouts"] unsignedLongLongValue];

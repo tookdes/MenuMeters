@@ -179,10 +179,8 @@ NSString* const kProcessListItemCPUKey           = @"cpuPercent";
     result = [result stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     
     // remove login shell prefixes
-    for (int i = 0; i < 2; ++i) {
-        if (name.length > 0) {
-            result = [result stringByReplacingOccurrencesOfString:@"-" withString:@"" options:0 range:NSMakeRange(0, 1)];
-        }
+    for (int i = 0; i < 2 && [result hasPrefix:@"-"]; ++i) {
+        result = [result substringFromIndex:1];
     }
     
     // continue other clean up here

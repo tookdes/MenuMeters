@@ -80,7 +80,6 @@ NSWindowController<NSWindowDelegate, NSToolbarDelegate, NSTabViewDelegate>
 	IBOutlet NSColorWell			*cpuSystemColor;
 	IBOutlet NSTextField			*cpuSystemColorLabel;
 	NSButton						*cpuPowerToggle;
-	NSColorWell						*cpuPowerColorWell;
 	// Disk pane controls
 	IBOutlet NSButton				*diskMeterToggle;
 	IBOutlet NSPopUpButton			*diskImageSet;

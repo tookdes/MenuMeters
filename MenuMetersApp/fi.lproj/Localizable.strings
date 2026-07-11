@@ -206,3 +206,7 @@
 
 // Miscellaneous error strings
 "No Active Interfaces" = "Ei aktiivisia verkkoliitäntöjä";
+"Internal" = "Sisäinen";
+"External" = "Ulkoinen";
+"Using this feature for the first time will bring up two alerts by the system" = "Kun käytät tätä toimintoa ensimmäisen kerran, järjestelmä näyttää kaksi ilmoitusta";
+"This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accessibility features." = "Tämä toiminto käyttää AppleScriptiä ja Järjestelmätapahtumia napsautuksen simulointiin ja Aktiivisuusmonitorin tiettyyn paneeliin siirtymiseen. Se edellyttää 1. vahvistusta, joka sallii MenuMetersin käyttää AppleScriptiä, ja 2. MenuMetersin sallimista Käyttöapu-kohdassa Järjestelmäasetusten Tietosuoja ja suojaus -osiossa.";

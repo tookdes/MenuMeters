@@ -50,6 +50,7 @@ enum {
 
 	int					pppconfdSocket;
 	NSFileHandle		*pppconfdHandle;
+	NSTimeInterval		retryAfter;
 
 } // MenuMeterNetPPP
 

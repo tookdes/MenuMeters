@@ -32,6 +32,7 @@
 // Per-physical-disk speed sample
 @interface MenuMeterDiskIOSample : NSObject
 @property(nonatomic, copy) NSString *bsdName;        // e.g. "disk0"
+@property(nonatomic, copy) NSString *identifier;     // persistent IOMedia UUID, falling back to bsdName
 @property(nonatomic, copy) NSString *displayName;    // e.g. "APPLE SSD" or "My Passport"
 @property(nonatomic) BOOL isInternal;
 @property(nonatomic) double readBytesPerSec;
@@ -50,7 +51,7 @@
 	// Legacy tracking values (aggregated)
 	uint64_t				previousTotalRead, previousTotalWrite;
 
-	// Per-disk tracking: bsdName -> { prevRead, prevWrite, prevTime }
+	// Per-disk tracking: identifier -> { prevRead, prevWrite, prevTime }
 	NSMutableDictionary		*diskTracking;
 
 } // MenuMeterDiskIO
@@ -62,7 +63,7 @@
 - (NSArray *)diskSpeedSamples;
 
 // List all known physical disks (for preferences)
-// Each entry: { bsdName, displayName, isInternal }
+// Each entry: { bsdName, identifier, displayName, isInternal }
 - (NSArray *)physicalDiskList;
 
 @end
