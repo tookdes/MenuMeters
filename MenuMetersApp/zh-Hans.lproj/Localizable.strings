@@ -10,6 +10,9 @@
 "CPU Power" = "CPU 功耗";
 "GPU Power" = "GPU 功耗";
 "ANE Power" = "ANE 功耗";
+"Memory Bandwidth" = "内存带宽";
+"Media Engine" = "媒体引擎";
+"GPU Memory" = "GPU 内存";
 "CPU Power" = "CPU 功耗";
 // Disk pane
 "Arrows" = "箭头";
@@ -91,6 +94,9 @@
 "GPU Frequency:" = "GPU 频率：";
 "GPU Power:" = "GPU 功耗：";
 "ANE Power:" = "ANE 功耗：";
+"Memory Bandwidth:" = "内存带宽：";
+"Media Engine:" = "媒体引擎：";
+"GPU Memory:" = "GPU 内存：";
 
 // Open Process Viewer/Open Console
 "Open Process Viewer" = "打开处理器显示器";

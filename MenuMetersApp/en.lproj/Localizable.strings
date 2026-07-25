@@ -10,6 +10,9 @@
 "CPU Power" = "CPU Power";
 "GPU Power" = "GPU Power";
 "ANE Power" = "ANE Power";
+"Memory Bandwidth" = "Memory Bandwidth";
+"Media Engine" = "Media Engine";
+"GPU Memory" = "GPU Memory";
 "CPU Power" = "CPU Power";
 "Timing and Width" = "Timing and Width";
 "Update interval (seconds):" = "Update interval (seconds):";
@@ -81,6 +84,9 @@
 "GPU Frequency:" = "GPU Frequency:";
 "GPU Power:" = "GPU Power:";
 "ANE Power:" = "ANE Power:";
+"Memory Bandwidth:" = "Memory Bandwidth:";
+"Media Engine:" = "Media Engine:";
+"GPU Memory:" = "GPU Memory:";
 
 // Open Process Viewer/Open Console
 "Open Process Viewer" = "Open Process Viewer";

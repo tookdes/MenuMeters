@@ -17,6 +17,9 @@
 #define kGPUFrequencyInfoMenuIndex      2
 #define kGPUPowerInfoMenuIndex          3
 #define kGPUANEPowerInfoMenuIndex       4
+#define kGPUBandwidthInfoMenuIndex      5
+#define kGPUMediaInfoMenuIndex          6
+#define kGPUMemoryInfoMenuIndex         7
 
 ///////////////////////////////////////////////////////////////
 //
@@ -41,9 +44,13 @@ enum {
     kGPUDisplayGraph                    = 2,
     kGPUDisplayFrequency                = 4,
     kGPUDisplayPower                    = 8,
-    kGPUDisplayANEPower                 = 16
+    kGPUDisplayANEPower                 = 16,
+    kGPUDisplayBandwidth                = 32,
+    kGPUDisplayMedia                    = 64,
+    kGPUDisplayMemory                   = 128
 };
 #define kGPUDisplayDefault              (kGPUDisplayPercent | kGPUDisplayGraph)
+#define kGPUDisplayValidFlags           (kGPUDisplayPercent | kGPUDisplayGraph | kGPUDisplayFrequency | kGPUDisplayPower | kGPUDisplayANEPower | kGPUDisplayBandwidth | kGPUDisplayMedia | kGPUDisplayMemory)
 
 // Timer
 #define kGPUUpdateIntervalMin           0.5

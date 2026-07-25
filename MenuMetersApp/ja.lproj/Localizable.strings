@@ -193,3 +193,22 @@
 "External" = "外付け";
 "Using this feature for the first time will bring up two alerts by the system" = "この機能を初めて使用すると、システムから2つの警告が表示されます";
 "This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accessibility features." = "この機能は AppleScript と System Events を使ってクリックをシミュレートし、アクティビティモニタの特定のパネルに切り替えます。これには、1. MenuMeters に AppleScript の使用を許可する確認と、2. システム設定の「プライバシーとセキュリティ」で MenuMeters にアクセシビリティの権限を与える操作が必要です。";
+
+// GPU (added)
+"Display GPU Menu Meter" = "GPU メニューメーターを表示";
+"GPU Display" = "GPU 表示";
+"GPU Frequency" = "GPU 周波数";
+"GPU Power" = "GPU 電力";
+"ANE Power" = "ANE 電力";
+"CPU Power" = "CPU 電力";
+"Memory Bandwidth" = "メモリ帯域幅";
+"Media Engine" = "メディアエンジン";
+"GPU Memory" = "GPU メモリ";
+"GPU:" = "GPU：";
+"GPU Usage:" = "GPU 使用率：";
+"GPU Frequency:" = "GPU 周波数：";
+"GPU Power:" = "GPU 電力：";
+"ANE Power:" = "ANE 電力：";
+"Memory Bandwidth:" = "メモリ帯域幅：";
+"Media Engine:" = "メディアエンジン：";
+"GPU Memory:" = "GPU メモリ：";

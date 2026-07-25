@@ -156,12 +156,31 @@
     }
 }
 */
+- (NSString *)statusItemImageSignature
+{
+    return nil;
+}
+
+- (void)invalidateStatusItemImageSignature
+{
+    lastStatusItemImageSignature = nil;
+}
+
 - (void)updateStatusItemImage
 {
+    NSString *signature = [self statusItemImageSignature];
+    if (signature.length &&
+        lastStatusItemImageSignature &&
+        [signature isEqualToString:lastStatusItemImageSignature] &&
+        statusItem.button.image != nil) {
+        return;
+    }
+
     NSImage *image = self.image;
     if (image) {
         statusItem.length = image.size.width;
         statusItem.button.image = image;
+        lastStatusItemImageSignature = [signature copy];
     }
 }
 - (void)configDisplay:(NSString*)bundleID fromPrefs:(MenuMeterDefaults*)ourPrefs withTimerInterval:(NSTimeInterval)interval

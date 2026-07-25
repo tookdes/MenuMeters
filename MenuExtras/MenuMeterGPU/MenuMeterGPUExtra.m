@@ -10,6 +10,9 @@
 #define kGPUFrequencyTitle         @"GPU Frequency:"
 #define kGPUPowerTitle             @"GPU Power:"
 #define kGPUANEPowerTitle          @"ANE Power:"
+#define kGPUBandwidthTitle         @"Memory Bandwidth:"
+#define kGPUMediaTitle             @"Media Engine:"
+#define kGPUMemoryTitle            @"GPU Memory:"
 #define kGPUUnavailable            @"Unavailable"
 
 @interface MenuMeterGPUExtra ()
@@ -21,6 +24,8 @@
 - (void)addInterBlockGapAtX:(CGFloat *)x;
 - (NSString *)percentString:(double)value;
 - (NSString *)wattsString:(double)value;
+- (NSString *)bandwidthString:(double)value;
+- (NSString *)memoryString:(uint64_t)bytes;
 - (double)gpuTotalPowerWatts;
 - (CGFloat)textBlockWidthForLabel:(NSString *)label sampleValue:(NSString *)value;
 @end
@@ -57,7 +62,10 @@
         kGPUUsageTitle,
         kGPUFrequencyTitle,
         kGPUPowerTitle,
-        kGPUANEPowerTitle
+        kGPUANEPowerTitle,
+        kGPUBandwidthTitle,
+        kGPUMediaTitle,
+        kGPUMemoryTitle
     ]) {
         menuItem = [extraMenu addItemWithTitle:[bundle localizedStringForKey:titleKey value:nil table:nil]
                                         action:nil
@@ -117,11 +125,19 @@
     NSString *frequency = currentSample.gpuFrequencyMHz > 0 ? [NSString stringWithFormat:@"%ld MHz", (long)currentSample.gpuFrequencyMHz] : unavailable;
     NSString *gpuWatts = [self gpuTotalPowerWatts] >= 0.0 ? [self wattsString:[self gpuTotalPowerWatts]] : unavailable;
     NSString *aneWatts = currentSample.anePowerWatts >= 0.0 ? [self wattsString:currentSample.anePowerWatts] : unavailable;
+    NSString *bw = currentSample.bandwidthTotalGBs >= 0.0 ? [self bandwidthString:currentSample.bandwidthTotalGBs] : unavailable;
+    NSString *media = currentSample.bandwidthMediaGBs >= 0.0 ? [self bandwidthString:currentSample.bandwidthMediaGBs] : unavailable;
+    NSString *mem = (currentSample.gpuMemoryInUseBytes > 0 || currentSample.gpuMemoryAllocBytes > 0)
+        ? [self memoryString:currentSample.gpuMemoryInUseBytes > 0 ? currentSample.gpuMemoryInUseBytes : currentSample.gpuMemoryAllocBytes]
+        : unavailable;
 
     LiveUpdateMenuItemTitle(extraMenu, kGPUUsageInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kGPUUsageTitle value:nil table:nil], usage]);
     LiveUpdateMenuItemTitle(extraMenu, kGPUFrequencyInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kGPUFrequencyTitle value:nil table:nil], frequency]);
     LiveUpdateMenuItemTitle(extraMenu, kGPUPowerInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kGPUPowerTitle value:nil table:nil], gpuWatts]);
     LiveUpdateMenuItemTitle(extraMenu, kGPUANEPowerInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kGPUANEPowerTitle value:nil table:nil], aneWatts]);
+    LiveUpdateMenuItemTitle(extraMenu, kGPUBandwidthInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kGPUBandwidthTitle value:nil table:nil], bw]);
+    LiveUpdateMenuItemTitle(extraMenu, kGPUMediaInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kGPUMediaTitle value:nil table:nil], media]);
+    LiveUpdateMenuItemTitle(extraMenu, kGPUMemoryInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kGPUMemoryTitle value:nil table:nil], mem]);
 }
 
 - (void)updateMenuWhenDown
@@ -158,8 +174,41 @@
         [self addInterBlockGapAtX:&x];
         [self appendTextBlockWithLabel:@"ANE" value:[self wattsString:currentSample.anePowerWatts] atX:&x];
     }
+    if (mode & kGPUDisplayBandwidth) {
+        [self addInterBlockGapAtX:&x];
+        [self appendTextBlockWithLabel:@"BW" value:[self bandwidthString:currentSample.bandwidthTotalGBs] atX:&x];
+    }
+    if (mode & kGPUDisplayMedia) {
+        [self addInterBlockGapAtX:&x];
+        [self appendTextBlockWithLabel:@"MED" value:[self bandwidthString:currentSample.bandwidthMediaGBs] atX:&x];
+    }
+    if (mode & kGPUDisplayMemory) {
+        [self addInterBlockGapAtX:&x];
+        uint64_t bytes = currentSample.gpuMemoryInUseBytes > 0 ? currentSample.gpuMemoryInUseBytes : currentSample.gpuMemoryAllocBytes;
+        [self appendTextBlockWithLabel:@"MEM" value:[self memoryString:bytes] atX:&x];
+    }
 
     return YES;
+}
+
+- (NSString *)statusItemImageSignature
+{
+    int mode = [ourPrefs gpuDisplayMode];
+    // Quantize like SiliconScope: skip sub-pixel / sub-display noise.
+    int usageQ = currentSample.gpuUsagePercent >= 0 ? (int)llround(MIN(100.0, currentSample.gpuUsagePercent)) : -1;
+    int freqQ = (int)(currentSample.gpuFrequencyMHz / 10); // 10 MHz buckets
+    int powerQ = [self gpuTotalPowerWatts] >= 0 ? (int)llround([self gpuTotalPowerWatts] * 10.0) : -1;
+    int aneQ = currentSample.anePowerWatts >= 0 ? (int)llround(currentSample.anePowerWatts * 10.0) : -1;
+    int bwQ = currentSample.bandwidthTotalGBs >= 0 ? (int)llround(currentSample.bandwidthTotalGBs * 10.0) : -1;
+    int mediaQ = currentSample.bandwidthMediaGBs >= 0 ? (int)llround(currentSample.bandwidthMediaGBs * 10.0) : -1;
+    int memQ = (int)((currentSample.gpuMemoryInUseBytes > 0 ? currentSample.gpuMemoryInUseBytes : currentSample.gpuMemoryAllocBytes) / (16ull << 20));
+    int histTail = 0;
+    if (gpuHistory.count) {
+        histTail = (int)llround(MIN(100.0, [gpuHistory.lastObject doubleValue]));
+    }
+    return [NSString stringWithFormat:@"g|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%@",
+            mode, usageQ, freqQ, powerQ, aneQ, bwQ, mediaQ, memQ, histTail,
+            [ourPrefs gpuGraphLength], self.isDark ? @"d" : @"l"];
 }
 
 - (void)renderGraphAtX:(CGFloat)x
@@ -183,7 +232,7 @@
 
 - (void)appendTextBlockWithLabel:(NSString *)label value:(NSString *)value atX:(CGFloat *)x
 {
-    NSColor *textColor = [label isEqualToString:@"ANE"] ? aneColor : gpuTextColor;
+    NSColor *textColor = ([label isEqualToString:@"ANE"] || [label isEqualToString:@"MED"]) ? aneColor : gpuTextColor;
     NSDictionary *labelAttributes = @{
         NSFontAttributeName: [NSFont monospacedDigitSystemFontOfSize:9.5f weight:NSFontWeightRegular],
         NSForegroundColorAttributeName: textColor
@@ -224,6 +273,33 @@
     return [wattsFormatter stringFromNumber:@(MAX(0.0, value))];
 }
 
+- (NSString *)bandwidthString:(double)value
+{
+    if (value < 0.0) {
+        return @"--";
+    }
+    if (value < 10.0) {
+        return [NSString stringWithFormat:@"%.1fG", value];
+    }
+    return [NSString stringWithFormat:@"%.0fG", value];
+}
+
+- (NSString *)memoryString:(uint64_t)bytes
+{
+    if (bytes == 0) {
+        return @"--";
+    }
+    double gb = (double)bytes / (1024.0 * 1024.0 * 1024.0);
+    if (gb < 1.0) {
+        double mb = (double)bytes / (1024.0 * 1024.0);
+        return [NSString stringWithFormat:@"%.0fM", mb];
+    }
+    if (gb < 10.0) {
+        return [NSString stringWithFormat:@"%.1fG", gb];
+    }
+    return [NSString stringWithFormat:@"%.0fG", gb];
+}
+
 - (double)gpuTotalPowerWatts
 {
     if (currentSample.gpuPowerWatts < 0.0) {
@@ -248,6 +324,7 @@
     gpuColor = [self colorByAdjustingForLightDark:[ourPrefs gpuColor]];
     gpuTextColor = [self colorByAdjustingForLightDark:[ourPrefs gpuTextColor]];
     aneColor = [self colorByAdjustingForLightDark:[ourPrefs gpuANEColor]];
+    [self invalidateStatusItemImageSignature];
 }
 
 - (void)updateMenuWidth
@@ -275,8 +352,24 @@
         [self addInterBlockGapAtX:&width];
         width += [self textBlockWidthForLabel:@"ANE" sampleValue:[self wattsString:currentSample.anePowerWatts]];
     }
+    if (mode & kGPUDisplayBandwidth) {
+        [self addInterBlockGapAtX:&width];
+        width += [self textBlockWidthForLabel:@"BW" sampleValue:[self bandwidthString:currentSample.bandwidthTotalGBs]];
+    }
+    if (mode & kGPUDisplayMedia) {
+        [self addInterBlockGapAtX:&width];
+        width += [self textBlockWidthForLabel:@"MED" sampleValue:[self bandwidthString:currentSample.bandwidthMediaGBs]];
+    }
+    if (mode & kGPUDisplayMemory) {
+        [self addInterBlockGapAtX:&width];
+        uint64_t bytes = currentSample.gpuMemoryInUseBytes > 0 ? currentSample.gpuMemoryInUseBytes : currentSample.gpuMemoryAllocBytes;
+        width += [self textBlockWidthForLabel:@"MEM" sampleValue:[self memoryString:bytes]];
+    }
     if (width < 18.0) {
         width = 18.0;
+    }
+    if (fabs(menuWidth - width) > 0.5) {
+        [self invalidateStatusItemImageSignature];
     }
     menuWidth = width;
 }
@@ -288,7 +381,7 @@
 #endif
     [self setupColor:nil];
     [self updateMenuWidth];
-
+    [self invalidateStatusItemImageSignature];
     [self updateStatusItemImage];
 }
 

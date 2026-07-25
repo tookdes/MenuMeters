@@ -16,6 +16,7 @@
     NSStatusItem* statusItem;
     NSTimer* updateTimer;
     CGFloat menuWidth;
+    NSString *lastStatusItemImageSignature;
 }
 -(NSColor*)colorByAdjustingForLightDark:(NSColor*)c;
 - (NSImage*)image;
@@ -39,6 +40,9 @@
 -(instancetype)initWithBundleID:(NSString*)bundleID;
 @property(nonatomic, readonly) BOOL isMenuVisible;
 @property(nonatomic, retain) NSString*bundleID;
+/// Optional content signature. Identical non-nil signatures skip status-item redraw.
+- (NSString *)statusItemImageSignature;
+- (void)invalidateStatusItemImageSignature;
 @end
 
 #define NSMenuExtra MenuMetersMenuExtraBase

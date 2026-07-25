@@ -340,7 +340,7 @@
 
 - (int)gpuDisplayMode {
     return [self loadBitFlagPref:kGPUDisplayModePref
-                      validFlags:(kGPUDisplayPercent | kGPUDisplayGraph | kGPUDisplayFrequency | kGPUDisplayPower | kGPUDisplayANEPower)
+                      validFlags:kGPUDisplayValidFlags
                     defaultValue:kGPUDisplayDefault];
 }
 

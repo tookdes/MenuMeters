@@ -112,6 +112,9 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     NSButton *gpuGraphToggle;
     NSButton *gpuFrequencyToggle;
     NSButton *gpuPowerToggle;
+    NSButton *gpuBandwidthToggle;
+    NSButton *gpuMediaToggle;
+    NSButton *gpuMemoryToggle;
     NSButton *cpuPaneANEPowerToggle;
     NSSlider *gpuInterval;
     NSTextField *gpuIntervalDisplay;
@@ -433,19 +436,31 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     gpuPowerToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"GPU Power"]
                                        frame:NSMakeRect(290, 462, 210, 22)
                                       action:@selector(gpuPrefChange:)];
+    gpuBandwidthToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"Memory Bandwidth"]
+                                           frame:NSMakeRect(50, 434, 180, 22)
+                                          action:@selector(gpuPrefChange:)];
+    gpuMediaToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"Media Engine"]
+                                       frame:NSMakeRect(290, 434, 210, 22)
+                                      action:@selector(gpuPrefChange:)];
+    gpuMemoryToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"GPU Memory"]
+                                        frame:NSMakeRect(50, 406, 180, 22)
+                                       action:@selector(gpuPrefChange:)];
     [view addSubview:gpuPercentageToggle];
     [view addSubview:gpuGraphToggle];
     [view addSubview:gpuFrequencyToggle];
     [view addSubview:gpuPowerToggle];
+    [view addSubview:gpuBandwidthToggle];
+    [view addSubview:gpuMediaToggle];
+    [view addSubview:gpuMemoryToggle];
 
-    [self addSectionTitle:[self localizedPreferenceString:@"Timing and Width"] toView:view y:380];
+    [self addSectionTitle:[self localizedPreferenceString:@"Timing and Width"] toView:view y:360];
     [view addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Update interval (seconds):"]
-                                    frame:NSMakeRect(50, 346, 185, 18)]];
-    gpuIntervalDisplay = [self labelWithTitle:@"x" frame:NSMakeRect(220, 346, 54, 18)];
+                                    frame:NSMakeRect(50, 326, 185, 18)]];
+    gpuIntervalDisplay = [self labelWithTitle:@"x" frame:NSMakeRect(220, 326, 54, 18)];
     gpuIntervalDisplay.alignment = NSTextAlignmentCenter;
     gpuIntervalDisplay.formatter = intervalFormatter;
     [view addSubview:gpuIntervalDisplay];
-    gpuInterval = [self sliderWithFrame:NSMakeRect(285, 339, 245, 24)
+    gpuInterval = [self sliderWithFrame:NSMakeRect(285, 319, 245, 24)
                                     min:kGPUUpdateIntervalMin
                                     max:kGPUUpdateIntervalMax
                                   ticks:20
@@ -453,11 +468,11 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     [view addSubview:gpuInterval];
 
     [view addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Graph width:"]
-                                    frame:NSMakeRect(50, 310, 160, 18)]];
-    gpuGraphWidthLabel = [self labelWithTitle:@"" frame:NSMakeRect(220, 310, 54, 18)];
+                                    frame:NSMakeRect(50, 290, 160, 18)]];
+    gpuGraphWidthLabel = [self labelWithTitle:@"" frame:NSMakeRect(220, 290, 54, 18)];
     gpuGraphWidthLabel.alignment = NSTextAlignmentCenter;
     [view addSubview:gpuGraphWidthLabel];
-    gpuGraphWidth = [self sliderWithFrame:NSMakeRect(285, 303, 245, 24)
+    gpuGraphWidth = [self sliderWithFrame:NSMakeRect(285, 283, 245, 24)
                                       min:kGPUGraphWidthMin
                                       max:kGPUGraphWidthMax
                                     ticks:8
@@ -465,11 +480,11 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     [view addSubview:gpuGraphWidth];
 
     [view addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Menu bar horizontal padding:"]
-                                    frame:NSMakeRect(50, 274, 210, 18)]];
-    menuBarPaddingLabel = [self labelWithTitle:@"" frame:NSMakeRect(250, 274, 35, 18)];
+                                    frame:NSMakeRect(50, 254, 210, 18)]];
+    menuBarPaddingLabel = [self labelWithTitle:@"" frame:NSMakeRect(250, 254, 35, 18)];
     menuBarPaddingLabel.alignment = NSTextAlignmentCenter;
     [view addSubview:menuBarPaddingLabel];
-    menuBarPadding = [self sliderWithFrame:NSMakeRect(285, 267, 245, 24)
+    menuBarPadding = [self sliderWithFrame:NSMakeRect(285, 247, 245, 24)
                                        min:kMenuBarHorizontalPaddingMin
                                        max:kMenuBarHorizontalPaddingMax
                                      ticks:kMenuBarHorizontalPaddingMax + 1
@@ -1015,6 +1030,15 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     if ([cpuPaneANEPowerToggle state] == NSOnState) {
         mode |= kGPUDisplayANEPower;
     }
+    if ([gpuBandwidthToggle state] == NSOnState) {
+        mode |= kGPUDisplayBandwidth;
+    }
+    if ([gpuMediaToggle state] == NSOnState) {
+        mode |= kGPUDisplayMedia;
+    }
+    if ([gpuMemoryToggle state] == NSOnState) {
+        mode |= kGPUDisplayMemory;
+    }
     if (mode == 0) {
         mode = kGPUDisplayPercent;
     }
@@ -1039,6 +1063,9 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
         sender == gpuGraphToggle ||
         sender == gpuFrequencyToggle ||
         sender == gpuPowerToggle ||
+        sender == gpuBandwidthToggle ||
+        sender == gpuMediaToggle ||
+        sender == gpuMemoryToggle ||
         sender == cpuPaneANEPowerToggle) {
         [ourPrefs saveGpuDisplayMode:[self gpuDisplayMode]];
     } else if (sender == gpuInterval) {
@@ -1062,6 +1089,9 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     [gpuFrequencyToggle setState:(mode & kGPUDisplayFrequency) ? NSOnState : NSOffState];
     [gpuPowerToggle setState:(mode & kGPUDisplayPower) ? NSOnState : NSOffState];
     [cpuPaneANEPowerToggle setState:(mode & kGPUDisplayANEPower) ? NSOnState : NSOffState];
+    [gpuBandwidthToggle setState:(mode & kGPUDisplayBandwidth) ? NSOnState : NSOffState];
+    [gpuMediaToggle setState:(mode & kGPUDisplayMedia) ? NSOnState : NSOffState];
+    [gpuMemoryToggle setState:(mode & kGPUDisplayMemory) ? NSOnState : NSOffState];
 
     [gpuInterval setDoubleValue:[ourPrefs gpuInterval]];
     [gpuIntervalDisplay takeDoubleValueFrom:gpuInterval];
