@@ -65,7 +65,7 @@
 "MB" = "MB";
 "GB" = "GB";
 "Memory Pressure:" = "メモリプレッシャー：";
-"%@%%\t(level %@)" = "%@%%\t(レベル %@)";
+"%@%% pressure (level %@)" = "%1$@%% 圧力（レベル %2$@）";
 
 // Menubar display labels used in free/total mode
 "U:" = "使用：";
@@ -173,7 +173,8 @@
 // Traffic total format string. The Tx and Rx labels from above are automatically used
 // as the first param, and numbers are localized automatically by NSNumberFormatter
 // ex: "Tx: XX.XMB (XXX,XXX bytes)
-"%@ %@ (%@ bytes)" = "%1$@ %2$@ (%3$@ バイト)";
+"TrafficTotalBytesFormat" = "%1$@ %2$@ (%3$@ バイト)";
+"TrafficTotalBitsFormat" = "%1$@ %2$@ (%3$@ %4$@)";
 
 // Menu action title strings
 "Open Network Utility" = "ネットワークユーティリティを開く";

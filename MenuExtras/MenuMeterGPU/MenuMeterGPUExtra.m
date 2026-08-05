@@ -206,9 +206,17 @@
     if (gpuHistory.count) {
         histTail = (int)llround(MIN(100.0, [gpuHistory.lastObject doubleValue]));
     }
-    return [NSString stringWithFormat:@"g|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%@",
+    // The graph scrolls even when the current sample repeats (idle), so the
+    // whole quantized history must be part of the signature or stale spikes
+    // stay pinned at the right edge forever.
+    NSUInteger histHash = 2166136261u;
+    for (NSNumber *value in gpuHistory) {
+        histHash = (histHash ^ (NSUInteger)llround(MIN(100.0, MAX(0.0, [value doubleValue])))) * 16777619u;
+    }
+    return [NSString stringWithFormat:@"g|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%@|%lu|%lu",
             mode, usageQ, freqQ, powerQ, aneQ, bwQ, mediaQ, memQ, histTail,
-            [ourPrefs gpuGraphLength], self.isDark ? @"d" : @"l"];
+            [ourPrefs gpuGraphLength], self.isDark ? @"d" : @"l",
+            (unsigned long)gpuHistory.count, (unsigned long)histHash];
 }
 
 - (void)renderGraphAtX:(CGFloat)x

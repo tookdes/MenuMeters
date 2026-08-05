@@ -191,7 +191,8 @@
 // Traffic total format string. The Tx and Rx labels from above are automatically used
 // as the first param, and numbers are localized automatically by NSNumberFormatter
 // ex: "Tx: XX.XMB (XXX,XXX bytes)
-"%@ %@ (%@ bytes)" = "%1$@ %2$@ (%3$@ bytes)";
+"TrafficTotalBytesFormat" = "%1$@ %2$@ (%3$@ bytes)";
+"TrafficTotalBitsFormat" = "%1$@ %2$@ (%3$@ %4$@)";
 
 // Menu action title strings
 "Open Network Utility" = "Open Netwerkhulpprogramma";

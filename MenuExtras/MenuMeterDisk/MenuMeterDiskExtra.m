@@ -133,7 +133,7 @@ static BOOL MMDiskSampleIsSelected(MenuMeterDiskIOSample *sample, NSArray *selec
     }
     if (mode & kDiskDisplayThroughput) {
         NSDictionary *attrs = @{NSFontAttributeName: throughputFont};
-        NSAttributedString *sample = [[NSAttributedString alloc] initWithString:@"999.9 MB/s" attributes:attrs];
+        NSAttributedString *sample = [[NSAttributedString alloc] initWithString:@"999.99 GB/s" attributes:attrs]; // widest MMDiskSpeedString output
         width += ceil(sample.size.width);
     }
     if (width < 18.0) width = 18.0;

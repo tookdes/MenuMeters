@@ -115,7 +115,7 @@
 "MB" = "MB";
 "GB" = "GB";
 "Memory Pressure:" = "Memory Pressure:";
-"%@%%\t(level %@)" = "%@%%\t(level %@)";
+"%@%% pressure (level %@)" = "%@%% pressure (level %@)";
 //	In the interest of improving localizability most strings in MenuMeters
 //	are exposed as NSString format strings, including the %1$, %2$ parameter placement
 //	convention. If localization requires different ordering of the parameters you
@@ -233,7 +233,8 @@
 // Traffic total format string. The Tx and Rx labels from above are automatically used
 // as the first param, and numbers are localized automatically by NSNumberFormatter
 // ex: "Tx: XX.XMB (XXX,XXX bytes)
-"%@ %@ (%@ bytes)" = "%1$@ %2$@ (%3$@ bytes)";
+"TrafficTotalBytesFormat" = "%1$@ %2$@ (%3$@ bytes)";
+"TrafficTotalBitsFormat" = "%1$@ %2$@ (%3$@ %4$@)";
 
 // Menu action title strings
 "Open Network Utility" = "Open Network Utility";

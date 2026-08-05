@@ -232,7 +232,14 @@
                 defaultValue:kCPUTemperatureUnitCelsius];
 }
 - (NSString*)cpuTemperatureSensor{
-    return [self loadStringPref:kCPUTemperatureSensor defaultValue:kCPUTemperatureSensorDefault];
+    NSString *sensor = [self loadStringPref:kCPUTemperatureSensor defaultValue:kCPUTemperatureSensorDefault];
+    // Normalize the sentinel once: old builds could persist the literal
+    // "CPUTemperatureSensorDefault" as the pref value.
+    if ([sensor isEqualToString:@"CPUTemperatureSensorDefault"]) {
+        sensor = kCPUTemperatureSensorDefault;
+        [self saveStringPref:kCPUTemperatureSensor value:sensor];
+    }
+    return sensor;
 }
 -(void)saveCpuTemperatureSensor:(NSString *)name{
     [self saveStringPref:kCPUTemperatureSensor value:name];

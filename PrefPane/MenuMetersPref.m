@@ -314,7 +314,9 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	[cpuIntervalDisplay setFormatter:intervalFormatter];
 	[diskIntervalDisplay setFormatter:intervalFormatter];
 	[netIntervalDisplay setFormatter:intervalFormatter];
+#if TARGET_CPU_ARM64
     [self setupGPUPaneWithFormatter:intervalFormatter];
+#endif
     [self setupCPUPageHardwareControls];
     [self setupDiskPane];
 
@@ -1268,12 +1270,9 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 		[memPageinColor setEnabled:NO];
 		[memPageoutColor setEnabled:NO];
 	}
-/*    if (([memDisplayMode indexOfSelectedItem] +1) == kMemDisplayBar) {
-        [memPressureMode setEnabled:YES];
-    }
-    else {
-        [memPressureMode setEnabled:NO];
-    }*/
+    int memMode = (int)[memDisplayMode indexOfSelectedItem] + 1;
+    BOOL pressureApplicable = (memMode == kMemDisplayBar || memMode == kMemDisplayGraph);
+    [memPressureMode setEnabled:pressureApplicable];
 
 	// Notify
 	if ([self isExtraWithBundleIDLoaded:kMemMenuBundleID]) {

@@ -82,6 +82,8 @@
 #define kThroughputTitle				@"Throughput:"
 #define kPeakThroughputTitle			@"Peak Throughput:"
 #define kTrafficTotalTitle				@"Traffic Totals:"
+#define kTrafficTotalBytesFormat		@"TrafficTotalBytesFormat"
+#define kTrafficTotalBitsFormat		@"TrafficTotalBitsFormat"
 #define kOpenNetworkUtilityTitle		@"Open Network Utility"
 #define kOpenNetworkPrefsTitle			@"Open Network Preferences"
 #define kOpenInternetConnectTitle		@"Open Internet Connect"
@@ -759,7 +761,7 @@
 
 		// Grab history data
 		NSDictionary *netHistoryEntry = [netHistoryData objectAtIndex:renderPosition];
-		if (!netHistoryData) continue;
+		if (!netHistoryEntry) continue;
 		float sampleInterval = [[netHistoryIntervals objectAtIndex:renderPosition] floatValue];
 		if (sampleInterval <= 0) continue;
 
@@ -1537,11 +1539,11 @@
 	if ([ourPrefs netThroughputBits]) {
 		unscaledTraffic *= 8;
 		NSString *prettyTotal = [prettyIntFormatter stringForObjectValue:@(unscaledTraffic)];
-		return [NSString stringWithFormat:@"%@ %@ (%@ %@)", directionLabel, scaledTrafficTotal,
-				prettyTotal, [localizedStrings objectForKey:kBitsLabel]];
+		return [NSString stringWithFormat:[localizedStrings objectForKey:kTrafficTotalBitsFormat],
+				directionLabel, scaledTrafficTotal, prettyTotal, [localizedStrings objectForKey:kBitsLabel]];
 	}
 	NSString *prettyTotal = [prettyIntFormatter stringForObjectValue:@(unscaledTraffic)];
-	return [NSString stringWithFormat:[localizedStrings objectForKey:@"%@ %@ (%@ bytes)"],
+	return [NSString stringWithFormat:[localizedStrings objectForKey:kTrafficTotalBytesFormat],
 			directionLabel, scaledTrafficTotal, prettyTotal];
 
 } // trafficStringForNumber:withLabel:

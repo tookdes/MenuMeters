@@ -58,7 +58,7 @@
 #define kPageStatsTitle						@"Memory Pages:"
 #define kVMStatsTitle						@"VM Statistics:"
 #define kMemPressureTitle                                       @"Memory Pressure:"
-#define kMemPressureFormat                                      @"%@%%\t(level %@)"
+#define kMemPressureFormat                                      @"%@%% pressure (level %@)"
 #define kSwapStatsTitle						@"Swap Files:"
 #define kUsageFormat						@"%@ used, %@ free, %@ total"
 #define kActiveWiredFormat					@"%@ active, %@ wired"

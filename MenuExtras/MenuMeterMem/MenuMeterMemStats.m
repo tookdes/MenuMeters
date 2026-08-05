@@ -477,9 +477,9 @@ static host_statistics64_Ptr host_statistics64_Impl = NULL;
     // This is how AAPL's memory_pressure tool reports "System-wide memory free percentage":
     //error = memorystatus_get_level((user_addr_t) level);
     error = syscall(SYS_memorystatus_get_level, &level);
-    if(error){
-        NSLog(@"memorystatus_get_level failed: error=%@ errorno=%@ (%s)",@(error),@(errno),strerror(errno));
-		return 0;
+    if (error) {
+        // Transient syscall failures are common; 0 (no pressure) is a safe fallback.
+        return 0;
     }
 	return MIN(100, MAX(0, 100 - level));
 }

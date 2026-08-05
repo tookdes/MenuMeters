@@ -679,7 +679,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 - (NSNumber *)speedForInterfaceNameViaIfConfig:(NSString *)bsdInterface {
 
 	if (!bsdInterface) return nil;
-    NSLog(@"getting the speed for %@",bsdInterface);
     /* The old way to get the speed via IOKit no longer reliably works, most probably due to the slow move to DriverKit.
      The link speed as reported by NetworkUtility.app can also be obtained by ifconfig, whose source code is available at
      https://opensource.apple.com/source/network_cmds/network_cmds-596/ifconfig.tproj/
