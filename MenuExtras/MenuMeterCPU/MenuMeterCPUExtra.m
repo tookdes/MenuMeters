@@ -366,7 +366,7 @@
 
 #if TARGET_CPU_ARM64
     title = performanceSample.cpuPowerWatts >= 0.0 ? [self wattsString:performanceSample.cpuPowerWatts] : [[NSBundle mainBundle] localizedStringForKey:kCPUUnavailable value:nil table:nil];
-    LiveUpdateMenuItemTitle(extraMenu, kCPUPowerInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kCPUPowerTitle value:nil table:nil], title]);
+    LiveUpdateMenuItemTitle(extraMenu, kCPUPowerInfoMenuIndex, title);
 #endif
 
 #if TARGET_CPU_X86_64

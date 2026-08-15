@@ -13,6 +13,20 @@
 "Memory Bandwidth" = "Memory Bandwidth";
 "Media Engine" = "Media Engine";
 "GPU Memory" = "GPU Memory";
+
+// Disk pane
+"Arrows" = "Arrows";
+"Throughput" = "Throughput";
+"Arrows and Throughput" = "Arrows and Throughput";
+"Throughput Display" = "Throughput Display";
+"All Internal Disks (default)" = "All Internal Disks (default)";
+"Arrow style:" = "Arrow style:";
+"%d Disks Selected" = "%d Disks Selected";
+"Read" = "Read";
+"Write" = "Write";
+"Disk" = "Disk";
+"Memory" = "Memory";
+"Network" = "Network";
 "CPU Power" = "CPU Power";
 "Timing and Width" = "Timing and Width";
 "Update interval (seconds):" = "Update interval (seconds):";

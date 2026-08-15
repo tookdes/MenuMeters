@@ -166,6 +166,16 @@
     lastStatusItemImageSignature = nil;
 }
 
+- (NSString *)statusItemTooltip
+{
+    if ([self.bundleID isEqualToString:kCPUMenuBundleID]) return @"CPU";
+    if ([self.bundleID isEqualToString:kGPUMenuBundleID]) return @"GPU";
+    if ([self.bundleID isEqualToString:kDiskMenuBundleID]) return NSLocalizedString(@"Disk", @"Disk");
+    if ([self.bundleID isEqualToString:kMemMenuBundleID]) return NSLocalizedString(@"Memory", @"Memory");
+    if ([self.bundleID isEqualToString:kNetMenuBundleID]) return NSLocalizedString(@"Network", @"Network");
+    return @"MenuMeters";
+}
+
 - (void)updateStatusItemImage
 {
     NSString *signature = [self statusItemImageSignature];
@@ -203,6 +213,9 @@
 #endif
             statusItem.menu = self.menu;
             statusItem.menu.delegate = self;
+            NSString *tooltip = [self statusItemTooltip];
+            statusItem.button.toolTip = tooltip;
+            statusItem.button.accessibilityLabel = tooltip;
             /*
              Observing effectiveAppearance has a serious drawback when the Mac has two moniters, one with a light menubar and another with a dard menubar, which can happen since Big Sur depending on the chosen desktop pictures.
              In such cases statusItem.button.effectiveAppearance changes each time the system redraws the statusItem.button on two menubars, making configFromPrefs: called every time.

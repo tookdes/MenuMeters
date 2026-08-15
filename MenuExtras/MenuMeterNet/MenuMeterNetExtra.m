@@ -1428,31 +1428,23 @@
 
 - (CGFloat)currentThroughputValueWidth
 {
-	double txValue = 0;
-	double rxValue = 0;
-	BOOL interfaceUp = [[preferredInterfaceConfig objectForKey:@"interfaceup"] boolValue];
-	if (interfaceUp) {
-		NSDictionary *primaryStats = [[netHistoryData lastObject] objectForKey:[preferredInterfaceConfig objectForKey:@"statname"]];
-		if (primaryStats) {
-			txValue = [[primaryStats objectForKey:@"deltaout"] doubleValue];
-			rxValue = [[primaryStats objectForKey:@"deltain"] doubleValue];
-		}
-	}
-	if (txValue < 0) { txValue = 0;	}
-	if (rxValue < 0) { rxValue = 0;	}
-
-	double sampleInterval = [ourPrefs netInterval];
-	NSNumber *sampleIntervalNum = [netHistoryIntervals lastObject];
-	if (sampleIntervalNum && ([sampleIntervalNum doubleValue] > 0)) {
-		sampleInterval = [sampleIntervalNum doubleValue];
-	}
-
-	NSString *txString = [self menubarThroughputStringForBytes:txValue inInterval:sampleInterval];
-	NSString *rxString = [self menubarThroughputStringForBytes:rxValue inInterval:sampleInterval];
+	// Size to the widest unit the formatter can emit so the menu extra
+	// doesn't shove neighbors around as traffic crosses KB/MB/GB.
+	int kilo = [ourPrefs netThroughputBits] ? kKiloDecimal : kKiloBinary;
+	double samples[] = { 999.0, kilo * 999.0, kilo * kilo * 99.9, kilo * kilo * kilo * 9.99 };
 	NSDictionary *attributes = @{NSFontAttributeName: throughputFont};
-	NSAttributedString *renderTxString = [[NSAttributedString alloc] initWithString:txString attributes:attributes];
-	NSAttributedString *renderRxString = [[NSAttributedString alloc] initWithString:rxString attributes:attributes];
-	return ceil(MAX([renderTxString size].width, [renderRxString size].width));
+	CGFloat width = 0;
+	for (size_t i = 0; i < sizeof(samples) / sizeof(samples[0]); i++) {
+		double bytesPerSecond = samples[i];
+		if ([ourPrefs netThroughputBits]) {
+			bytesPerSecond /= 8.0;
+		}
+		NSString *sample = [self throughputStringForBytesPerSecond:bytesPerSecond withSpace:NO];
+		if (!sample.length) continue;
+		NSAttributedString *render = [[NSAttributedString alloc] initWithString:sample attributes:attributes];
+		width = MAX(width, ceil([render size].width));
+	}
+	return width;
 }
 
 ///////////////////////////////////////////////////////////////

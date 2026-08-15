@@ -345,33 +345,31 @@
     }
     if (mode & kGPUDisplayPercent) {
         [self addInterBlockGapAtX:&width];
-        width += [self textBlockWidthForLabel:@"GPU" sampleValue:[self percentString:currentSample.gpuUsagePercent]];
+        width += [self textBlockWidthForLabel:@"GPU" sampleValue:@"100%"];
     }
     if (mode & kGPUDisplayFrequency) {
         [self addInterBlockGapAtX:&width];
-        NSString *value = currentSample.gpuFrequencyMHz > 0 ? [NSString stringWithFormat:@"%ld", (long)currentSample.gpuFrequencyMHz] : @"---";
-        width += [self textBlockWidthForLabel:@"MHz" sampleValue:value];
+        width += [self textBlockWidthForLabel:@"MHz" sampleValue:@"9999"];
     }
     if (mode & kGPUDisplayPower) {
         [self addInterBlockGapAtX:&width];
-        width += [self textBlockWidthForLabel:@"GPU" sampleValue:[self wattsString:[self gpuTotalPowerWatts]]];
+        width += [self textBlockWidthForLabel:@"GPU" sampleValue:@"99.9W"];
     }
     if (mode & kGPUDisplayANEPower) {
         [self addInterBlockGapAtX:&width];
-        width += [self textBlockWidthForLabel:@"ANE" sampleValue:[self wattsString:currentSample.anePowerWatts]];
+        width += [self textBlockWidthForLabel:@"ANE" sampleValue:@"99.9W"];
     }
     if (mode & kGPUDisplayBandwidth) {
         [self addInterBlockGapAtX:&width];
-        width += [self textBlockWidthForLabel:@"BW" sampleValue:[self bandwidthString:currentSample.bandwidthTotalGBs]];
+        width += [self textBlockWidthForLabel:@"BW" sampleValue:@"99.9G"];
     }
     if (mode & kGPUDisplayMedia) {
         [self addInterBlockGapAtX:&width];
-        width += [self textBlockWidthForLabel:@"MED" sampleValue:[self bandwidthString:currentSample.bandwidthMediaGBs]];
+        width += [self textBlockWidthForLabel:@"MED" sampleValue:@"99.9G"];
     }
     if (mode & kGPUDisplayMemory) {
         [self addInterBlockGapAtX:&width];
-        uint64_t bytes = currentSample.gpuMemoryInUseBytes > 0 ? currentSample.gpuMemoryInUseBytes : currentSample.gpuMemoryAllocBytes;
-        width += [self textBlockWidthForLabel:@"MEM" sampleValue:[self memoryString:bytes]];
+        width += [self textBlockWidthForLabel:@"MEM" sampleValue:@"99.9G"];
     }
     if (width < 18.0) {
         width = 18.0;

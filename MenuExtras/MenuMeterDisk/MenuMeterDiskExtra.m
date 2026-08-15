@@ -165,12 +165,16 @@ static BOOL MMDiskSampleIsSelected(MenuMeterDiskIOSample *sample, NSArray *selec
     NSString *readStr = MMDiskSpeedString(totalRead);
     NSString *writeStr = MMDiskSpeedString(totalWrite);
 
-    NSDictionary *attrs = @{
+    NSDictionary *readAttrs = @{
         NSFontAttributeName: throughputFont,
-        NSForegroundColorAttributeName: fgMenuThemeColor
+        NSForegroundColorAttributeName: [NSColor systemGreenColor]
     };
-    NSAttributedString *renderRead = [[NSAttributedString alloc] initWithString:readStr attributes:attrs];
-    NSAttributedString *renderWrite = [[NSAttributedString alloc] initWithString:writeStr attributes:attrs];
+    NSDictionary *writeAttrs = @{
+        NSFontAttributeName: throughputFont,
+        NSForegroundColorAttributeName: [NSColor systemRedColor]
+    };
+    NSAttributedString *renderRead = [[NSAttributedString alloc] initWithString:readStr attributes:readAttrs];
+    NSAttributedString *renderWrite = [[NSAttributedString alloc] initWithString:writeStr attributes:writeAttrs];
 
     [renderRead drawAtPoint:NSMakePoint(ceil(menuWidth - renderRead.size.width), floor(self.imageHeight / 2) - 1)];
     [renderWrite drawAtPoint:NSMakePoint(ceil(menuWidth - renderWrite.size.width), -1)];
@@ -204,8 +208,12 @@ static BOOL MMDiskSampleIsSelected(MenuMeterDiskIOSample *sample, NSArray *selec
             NSMenuItem *item = [extraMenu addItemWithTitle:title action:nil keyEquivalent:@""];
             [item setEnabled:NO];
 
-            NSString *rStr = [NSString stringWithFormat:@"  R: %@", MMDiskSpeedString(sample.readBytesPerSec)];
-            NSString *wStr = [NSString stringWithFormat:@"  W: %@", MMDiskSpeedString(sample.writeBytesPerSec)];
+            NSString *rStr = [NSString stringWithFormat:@"%@: %@",
+                               [localizedStrings objectForKey:@"Read"],
+                               MMDiskSpeedString(sample.readBytesPerSec)];
+            NSString *wStr = [NSString stringWithFormat:@"%@: %@",
+                               [localizedStrings objectForKey:@"Write"],
+                               MMDiskSpeedString(sample.writeBytesPerSec)];
             NSMenuItem *rItem = [extraMenu addItemWithTitle:rStr action:nil keyEquivalent:@""];
             [rItem setEnabled:NO];
             [rItem setIndentationLevel:1];

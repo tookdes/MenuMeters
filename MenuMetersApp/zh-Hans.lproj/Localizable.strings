@@ -23,6 +23,11 @@
 "All Internal Disks (default)" = "所有内置磁盘（默认）";
 "Read" = "读取";
 "Write" = "写入";
+"Arrow style:" = "箭头样式：";
+"%d Disks Selected" = "已选 %d 个磁盘";
+"Disk" = "磁盘";
+"Memory" = "内存";
+"Network" = "网络";
 
 "Timing and Width" = "时间和宽度";
 "Update interval (seconds):" = "更新间隔(秒)：";

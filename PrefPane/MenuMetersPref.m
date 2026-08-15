@@ -115,7 +115,8 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     NSButton *gpuBandwidthToggle;
     NSButton *gpuMediaToggle;
     NSButton *gpuMemoryToggle;
-    NSButton *cpuPaneANEPowerToggle;
+    NSButton *gpuANEPowerToggle;
+    NSTextField *arrowStyleLabel;
     NSSlider *gpuInterval;
     NSTextField *gpuIntervalDisplay;
     NSSlider *gpuGraphWidth;
@@ -188,6 +189,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     [self mainViewDidLoad];
     [self willSelect];
     [self setupAboutTab:about];
+    self.window.autorecalculatesKeyViewLoop = YES;
     if([self noMenuMeterLoaded]){
         [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
         [self.window makeKeyAndOrderFront:self];
@@ -312,6 +314,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	intervalFormatter = [NSUnarchiver unarchiveObjectWithData:[NSArchiver archivedDataWithRootObject:intervalFormatter]];
 	// Now set the formatters
 	[cpuIntervalDisplay setFormatter:intervalFormatter];
+	[memIntervalDisplay setFormatter:intervalFormatter];
 	[diskIntervalDisplay setFormatter:intervalFormatter];
 	[netIntervalDisplay setFormatter:intervalFormatter];
 #if TARGET_CPU_ARM64
@@ -447,6 +450,9 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     gpuMemoryToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"GPU Memory"]
                                         frame:NSMakeRect(50, 406, 180, 22)
                                        action:@selector(gpuPrefChange:)];
+    gpuANEPowerToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"ANE Power"]
+                                          frame:NSMakeRect(290, 406, 210, 22)
+                                         action:@selector(gpuPrefChange:)];
     [view addSubview:gpuPercentageToggle];
     [view addSubview:gpuGraphToggle];
     [view addSubview:gpuFrequencyToggle];
@@ -454,6 +460,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     [view addSubview:gpuBandwidthToggle];
     [view addSubview:gpuMediaToggle];
     [view addSubview:gpuMemoryToggle];
+    [view addSubview:gpuANEPowerToggle];
 
     [self addSectionTitle:[self localizedPreferenceString:@"Timing and Width"] toView:view y:360];
     [view addSubview:[self labelWithTitle:[self localizedPreferenceString:@"Update interval (seconds):"]
@@ -493,6 +500,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
                                     action:@selector(gpuPrefChange:)];
     [view addSubview:menuBarPadding];
 
+    [self addSectionTitle:[self localizedPreferenceString:@"Colors"] toView:view y:200];
     [view addSubview:[self labelWithTitle:@"GPU" frame:NSMakeRect(70, 170, 85, 18)]];
     gpuColor = [self colorWellWithFrame:NSMakeRect(70, 132, 53, 30) action:@selector(gpuPrefChange:)];
     [view addSubview:gpuColor];
@@ -534,11 +542,6 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
                                        frame:NSMakeRect(305, 521, 95, 22)
                                       action:@selector(cpuPrefChange:)];
     [cpuView addSubview:cpuPowerToggle];
-
-    cpuPaneANEPowerToggle = [self checkboxWithTitle:[self localizedPreferenceString:@"ANE Power"]
-                                              frame:NSMakeRect(412, 521, 125, 22)
-                                             action:@selector(gpuPrefChange:)];
-    [cpuView addSubview:cpuPaneANEPowerToggle];
 #endif
 }
 
@@ -547,8 +550,8 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     NSView *diskView = diskMeterToggle.superview;
     if (!diskView) return;
 
-    // Hide the old image set popup from XIB and replace with display mode popup
-    [diskImageSet setHidden:YES];
+    // Display mode takes the old image-set slot; move the image set below the interval slider.
+    diskImageSet.frame = NSMakeRect(273, 418, 262, 26);
 
     diskDisplayMode = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(273, 516, 262, 26) pullsDown:NO];
     [diskDisplayMode removeAllItems];
@@ -570,11 +573,15 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
         }
     }
 
+    arrowStyleLabel = [self labelWithTitle:[self localizedPreferenceString:@"Arrow style:"]
+                                     frame:NSMakeRect(50, 422, 210, 18)];
+    [diskView addSubview:arrowStyleLabel];
+
     // Throughput Display section
     [self addSectionTitle:[self localizedPreferenceString:@"Throughput Display"] toView:diskView y:310];
 
 
-    diskPhysicalDiskSelector = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(50, 280, 400, 26) pullsDown:NO];
+    diskPhysicalDiskSelector = [[NSPopUpButton alloc] initWithFrame:NSMakeRect(50, 280, 400, 26) pullsDown:YES];
     [diskPhysicalDiskSelector setAutoenablesItems:NO];
     [diskPhysicalDiskSelector setTarget:self];
     [diskPhysicalDiskSelector setAction:@selector(diskPrefChange:)];
@@ -600,7 +607,13 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     }
     if (migratedSelection) [ourPrefs saveDiskSelectedPhysicalDisks:selected];
     [diskPhysicalDiskSelector removeAllItems];
-    [diskPhysicalDiskSelector addItemWithTitle:[self localizedPreferenceString:@"All Internal Disks (default)"]];
+
+    NSString *allInternalTitle = [self localizedPreferenceString:@"All Internal Disks (default)"];
+    NSString *summary = allInternalTitle;
+    NSString *singleSelectionTitle = nil;
+    [diskPhysicalDiskSelector addItemWithTitle:summary]; // pull-down title item
+
+    [diskPhysicalDiskSelector addItemWithTitle:allInternalTitle];
     [[diskPhysicalDiskSelector lastItem] setState:selected.count == 0 ? NSOnState : NSOffState];
     for (NSDictionary *disk in disks) {
         NSString *bsd = disk[@"bsdName"];
@@ -613,13 +626,26 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
         NSMenuItem *item = [diskPhysicalDiskSelector lastItem];
         [item setRepresentedObject:identifier];
         [item setToolTip:bsd];
-        [item setState:([selected containsObject:identifier] || [selected containsObject:bsd]) ? NSOnState : NSOffState];
+        BOOL isSelected = [selected containsObject:identifier] || [selected containsObject:bsd];
+        [item setState:isSelected ? NSOnState : NSOffState];
+        if (isSelected) singleSelectionTitle = diskLabel;
     }
+    if (selected.count == 1 && singleSelectionTitle.length) {
+        summary = singleSelectionTitle;
+    } else if (selected.count > 1) {
+        summary = [NSString stringWithFormat:[self localizedPreferenceString:@"%d Disks Selected"], (int)selected.count];
+    }
+    [[diskPhysicalDiskSelector itemAtIndex:0] setTitle:summary];
+    [diskPhysicalDiskSelector selectItemAtIndex:0];
+
     [diskDisplayMode selectItemAtIndex:-1];
     [diskDisplayMode selectItemAtIndex:[ourPrefs diskDisplayMode] - 1];
 
     BOOL throughputEnabled = ([ourPrefs diskDisplayMode] & kDiskDisplayThroughput) ? YES : NO;
     [diskPhysicalDiskSelector setEnabled:throughputEnabled];
+    BOOL arrowsEnabled = ([ourPrefs diskDisplayMode] & kDiskDisplayArrows) ? YES : NO;
+    [diskImageSet setEnabled:arrowsEnabled];
+    arrowStyleLabel.textColor = arrowsEnabled ? [NSColor controlTextColor] : [NSColor disabledControlTextColor];
 }
 
 - (void)updateTemperatureSensors
@@ -629,6 +655,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
         cpuTemperatureSensor.enabled=NO;
         return;
     }
+    [cpuTemperatureSensor removeAllItems];
     NSMenu*menu=[cpuTemperatureSensor menu];
     for(NSString*name in sensorNames){
         NSString*displayName=[TemperatureReader displayNameForSensor:name];
@@ -1029,7 +1056,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     if ([gpuPowerToggle state] == NSOnState) {
         mode |= kGPUDisplayPower;
     }
-    if ([cpuPaneANEPowerToggle state] == NSOnState) {
+    if ([gpuANEPowerToggle state] == NSOnState) {
         mode |= kGPUDisplayANEPower;
     }
     if ([gpuBandwidthToggle state] == NSOnState) {
@@ -1068,7 +1095,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
         sender == gpuBandwidthToggle ||
         sender == gpuMediaToggle ||
         sender == gpuMemoryToggle ||
-        sender == cpuPaneANEPowerToggle) {
+        sender == gpuANEPowerToggle) {
         [ourPrefs saveGpuDisplayMode:[self gpuDisplayMode]];
     } else if (sender == gpuInterval) {
         [ourPrefs saveGpuInterval:[gpuInterval doubleValue]];
@@ -1090,7 +1117,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
     [gpuGraphToggle setState:(mode & kGPUDisplayGraph) ? NSOnState : NSOffState];
     [gpuFrequencyToggle setState:(mode & kGPUDisplayFrequency) ? NSOnState : NSOffState];
     [gpuPowerToggle setState:(mode & kGPUDisplayPower) ? NSOnState : NSOffState];
-    [cpuPaneANEPowerToggle setState:(mode & kGPUDisplayANEPower) ? NSOnState : NSOffState];
+    [gpuANEPowerToggle setState:(mode & kGPUDisplayANEPower) ? NSOnState : NSOffState];
     [gpuBandwidthToggle setState:(mode & kGPUDisplayBandwidth) ? NSOnState : NSOffState];
     [gpuMediaToggle setState:(mode & kGPUDisplayMedia) ? NSOnState : NSOffState];
     [gpuMemoryToggle setState:(mode & kGPUDisplayMemory) ? NSOnState : NSOffState];
@@ -1147,9 +1174,13 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 		[ourPrefs saveDiskInterval:[diskInterval doubleValue]];
 	} else if (sender == diskSelectMode) {
 		[ourPrefs saveDiskSelectMode:(int)[diskSelectMode indexOfSelectedItem]];
+	} else if (sender == diskImageSet) {
+		[ourPrefs saveDiskImageset:(int)[diskImageSet indexOfSelectedItem]];
 	} else if (sender == diskPhysicalDiskSelector) {
 		NSInteger idx = [diskPhysicalDiskSelector indexOfSelectedItem];
-        if (idx == 0) {
+        if (idx <= 0) {
+            // pull-down title item
+        } else if (idx == 1) {
             [ourPrefs saveDiskSelectedPhysicalDisks:@[]];
         } else {
             NSMenuItem *item = [diskPhysicalDiskSelector selectedItem];
@@ -1242,7 +1273,7 @@ static void scChangeCallback(SCDynamicStoreRef store, CFArrayRef changedKeys, vo
 	[memUsedColor setColor:[ourPrefs memUsedColor]];
 	[memPageinColor setColor:[ourPrefs memPageInColor]];
 	[memPageoutColor setColor:[ourPrefs memPageOutColor]];
-	[memIntervalDisplay takeIntValueFrom:memInterval];
+	[memIntervalDisplay takeDoubleValueFrom:memInterval];
 
 	// Disable controls as needed
 	if ((([memDisplayMode indexOfSelectedItem] + 1) == kMemDisplayPie) ||
