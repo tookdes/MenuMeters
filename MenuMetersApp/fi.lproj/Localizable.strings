@@ -89,6 +89,8 @@
 
 // Memory usage title menu item
 "Memory Usage:" = "Muistin käyttö:";
+"Top Memory Processes:" = "Eniten muistia käyttävät prosessit:";
+"Top Network Processes:" = "Eniten verkkoa käyttävät prosessit:";
 
 // Format string for memory usage. Float conversion to X.XX is
 // automatically localized by NSNumberFormatter and is therefore not exposed
@@ -211,3 +213,5 @@
 "External" = "Ulkoinen";
 "Using this feature for the first time will bring up two alerts by the system" = "Kun käytät tätä toimintoa ensimmäisen kerran, järjestelmä näyttää kaksi ilmoitusta";
 "This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accessibility features." = "Tämä toiminto käyttää AppleScriptiä ja Järjestelmätapahtumia napsautuksen simulointiin ja Aktiivisuusmonitorin tiettyyn paneeliin siirtymiseen. Se edellyttää 1. vahvistusta, joka sallii MenuMetersin käyttää AppleScriptiä, ja 2. MenuMetersin sallimista Käyttöapu-kohdassa Järjestelmäasetusten Tietosuoja ja suojaus -osiossa.";
+
+"Apple Silicon only" = "vain Apple Silicon";

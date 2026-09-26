@@ -13,6 +13,7 @@
 "Memory Bandwidth" = "Memory Bandwidth";
 "Media Engine" = "Media Engine";
 "GPU Memory" = "GPU Memory";
+"Apple Silicon only" = "Apple Silicon only";
 
 // Disk pane
 "Arrows" = "Arrows";
@@ -91,6 +92,8 @@
 
 // Top CPU processes title
 "Top CPU Intensive Processes:" = "Top CPU Intensive Processes:";
+"Top Memory Processes:" = "Top Memory Processes:";
+"Top Network Processes:" = "Top Network Processes:";
 
 // GPU menu titles
 "GPU:" = "GPU:";

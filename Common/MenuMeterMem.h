@@ -49,6 +49,11 @@
 #define kMemSwapMaxCountInfoMenuIndex		14
 #define kMemSwapSizeInfoMenuIndex			15
 
+// Top processes (ported from leeliu/MenuMeters v2.2.0, GPL-2.0)
+#define kMemProcessCountMin					0
+#define kMemProcessCountMax					25
+#define kMemProcessCountDefault				10
+
 ///////////////////////////////////////////////////////////////
 //
 //	Preference information
@@ -71,6 +76,7 @@
 #define kMemCompressedColorPref				@"MemCompressedColor"
 #define kMemPageInColorPref					@"MemPageInColor"
 #define kMemPageOutColorPref				@"MemPageOutColor"
+#define kMemMaxProcessCountPref				@"MemMaxProcessCount"
 
 // Display modes
 enum {

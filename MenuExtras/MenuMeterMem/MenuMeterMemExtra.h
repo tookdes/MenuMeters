@@ -27,6 +27,7 @@
 #import "MenuMeterDefaults.h"
 #import "MenuMeterMem.h"
 #import "MenuMeterMemStats.h"
+#import "MenuMeterMemTopProcesses.h"
 #import "MenuMeterWorkarounds.h"
 
 
@@ -52,6 +53,11 @@
 		// Width of the text display
 	float							textWidth;
     NSMenuItem                      *memDisplayGBMenuItem;
+	// Top memory processes (ported from leeliu/MenuMeters v2.2.0, GPL-2.0).
+	// Additive only: existing VM/swap sections above are preserved.
+	MenuMeterMemTopProcesses			*memTopProcesses;
+	NSMutableArray					*memProcessMenuItems;
+	NSTimer							*processRefreshTimer;
 	// History data
 	NSMutableArray					*memHistory;
 	NSDictionary					*currentSwapStats;

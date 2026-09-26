@@ -57,6 +57,12 @@
 #define kNetTransmitColorPref				@"NetTransmitColor"
 #define kNetReceiveColorPref				@"NetReceiveColor"
 #define kNetInactiveColorPref				@"NetInactiveColor"
+#define kNetMaxProcessCountPref				@"NetMaxProcessCount"
+
+// Top processes (ported from leeliu/MenuMeters v2.2.0, GPL-2.0)
+#define kNetProcessCountMin					0
+#define kNetProcessCountMax					25
+#define kNetProcessCountDefault				5
 
 // Display modes
 enum {

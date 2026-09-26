@@ -76,6 +76,8 @@
 
 // Memory usage title menu item
 "Memory Usage:" = "メモリ使用：";
+"Top Memory Processes:" = "メモリ使用量の多いプロセス：";
+"Top Network Processes:" = "ネットワーク使用量の多いプロセス：";
 
 // Format string for memory usage. Float conversion to X.XX is
 // automatically localized by NSNumberFormatter and is therefore not exposed
@@ -205,6 +207,7 @@
 "Memory Bandwidth" = "メモリ帯域幅";
 "Media Engine" = "メディアエンジン";
 "GPU Memory" = "GPU メモリ";
+"Apple Silicon only" = "Apple Silicon のみ";
 "GPU:" = "GPU：";
 "GPU Usage:" = "GPU 使用率：";
 "GPU Frequency:" = "GPU 周波数：";

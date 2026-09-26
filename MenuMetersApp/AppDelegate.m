@@ -68,11 +68,10 @@
     // If extras are init'ed first and raise, the preferences window is not live yet.
     // When extras are inited last, at least the pref pane is available for troubleshooting.
     cpuExtra=[[MenuMeterCPUExtra alloc] init];
-#if TARGET_CPU_ARM64
-    // GPU/ANE/bandwidth readings come from Apple-Silicon-only IOReport channels;
-    // on Intel the meter would only ever show "--%" and a flat graph.
+    // GPU usage/memory prefer IOReport on Apple Silicon and fall back to the
+    // public IOAccelerator reader, so Intel/AMD can still show percentage,
+    // graph, and GPU memory. Frequency/power/ANE/bandwidth stay Apple Silicon only.
     gpuExtra=[[MenuMeterGPUExtra alloc] init];
-#endif
     diskExtra=[[MenuMeterDiskExtra alloc] init];
     netExtra=[[MenuMeterNetExtra alloc] init];
     memExtra=[[MenuMeterMemExtra alloc] init];

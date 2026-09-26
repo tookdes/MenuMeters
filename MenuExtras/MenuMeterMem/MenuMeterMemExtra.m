@@ -34,6 +34,9 @@
 
 // Menu generation
 - (void)updateMenuContent;
+- (void)updateProcessMenuItems;
+- (void)processRefreshFired;
+- (void)processDataArrived:(NSNotification *)notification;
 - (void)toggleMemoryTextUnit:(id)sender;
 - (NSString *)memoryDisplayStringForMB:(double)megabytes;
 - (CGFloat)memoryDisplayTextWidth;
@@ -78,6 +81,7 @@
 #define kMBLabel							@"MB"
 #define kGBLabel                            @"GB"
 #define kMemDisplayGBMenuTitle              @"Show Memory Text in GB"
+#define kMemProcessTitle                    @"Top Memory Processes:"
 
 ///////////////////////////////////////////////////////////////
 //
@@ -187,6 +191,32 @@
                                                 action:@selector(toggleMemoryTextUnit:)
                                          keyEquivalent:@""];
     [memDisplayGBMenuItem setTarget:self];
+	// Top memory processes (ported from leeliu/MenuMeters v2.2.0, GPL-2.0).
+	// Pre-allocated and hidden until data arrives; existing sections above
+	// are preserved unchanged.
+	memTopProcesses = [[MenuMeterMemTopProcesses alloc] init];
+	[[NSNotificationCenter defaultCenter] addObserver:self
+											 selector:@selector(processDataArrived:)
+												 name:kMemTopProcessesUpdatedNotification
+											   object:memTopProcesses];
+	memProcessMenuItems = [NSMutableArray array];
+	{
+		NSMenuItem *sepItem = [NSMenuItem separatorItem];
+		[extraMenu addItem:sepItem];
+		sepItem.hidden = YES;
+		[memProcessMenuItems addObject:sepItem];
+		NSMenuItem *headerItem = [extraMenu addItemWithTitle:[[NSBundle mainBundle] localizedStringForKey:kMemProcessTitle value:nil table:nil] action:nil keyEquivalent:@""];
+		[headerItem setEnabled:NO];
+		headerItem.hidden = YES;
+		[memProcessMenuItems addObject:headerItem];
+		for (NSInteger i = 0; i < kMemProcessCountMax; i++) {
+			NSMenuItem *item = [extraMenu addItemWithTitle:@"" action:nil keyEquivalent:@""];
+			item.indentationLevel = 1;
+			[item setEnabled:NO];
+			item.hidden = YES;
+			[memProcessMenuItems addObject:item];
+		}
+	}
     [extraMenu addItem:[NSMenuItem separatorItem]];
     [self addStandardMenuEntriesTo:extraMenu];
 
@@ -855,10 +885,114 @@
     [memDisplayGBMenuItem setState:[ourPrefs memDisplayGB] ? NSOnState : NSOffState];
 	[self updateMenuContent];
 
+	// Update top memory processes
+	[self updateProcessMenuItems];
+
 	// Force the menu to redraw
 	LiveUpdateMenu(extraMenu);
 
 } // updateMenuWhenDown
+
+///////////////////////////////////////////////////////////////
+//
+//	NSMenuDelegate — top processes lifecycle
+//	(ported from leeliu/MenuMeters v2.2.0, GPL-2.0)
+//
+///////////////////////////////////////////////////////////////
+
+- (void)menuWillOpen:(NSMenu *)menu {
+	[super menuWillOpen:menu];
+
+	[processRefreshTimer invalidate];
+	processRefreshTimer = nil;
+
+	if ([ourPrefs memMaxProcessCount] > 0) {
+		[memTopProcesses startUpdateProcessList];
+		processRefreshTimer = [NSTimer timerWithTimeInterval:2.0
+													 target:self
+												   selector:@selector(processRefreshFired)
+												   userInfo:nil
+													repeats:YES];
+		[[NSRunLoop mainRunLoop] addTimer:processRefreshTimer forMode:NSRunLoopCommonModes];
+		[self updateProcessMenuItems];
+	} else {
+		[memTopProcesses stopUpdateProcessList];
+		[self updateProcessMenuItems];
+	}
+}
+
+- (void)menuDidClose:(NSMenu *)menu {
+	[memTopProcesses stopUpdateProcessList];
+	[processRefreshTimer invalidate];
+	processRefreshTimer = nil;
+	[super menuDidClose:menu];
+}
+
+- (void)processRefreshFired {
+	[self updateProcessMenuItems];
+	LiveUpdateMenu(extraMenu);
+}
+
+- (void)processDataArrived:(NSNotification *)notification {
+	if (self.isMenuVisible) {
+		[self updateProcessMenuItems];
+		LiveUpdateMenu(extraMenu);
+	}
+}
+
+- (void)updateProcessMenuItems {
+	int maxCount = [ourPrefs memMaxProcessCount];
+	if (maxCount == 0) {
+		NSMenuItem *sepItem = memProcessMenuItems[0];
+		NSMenuItem *headerItem = memProcessMenuItems[1];
+		sepItem.hidden = YES;
+		headerItem.hidden = YES;
+		for (NSInteger ndx = 0; ndx < kMemProcessCountMax; ndx++) {
+			NSMenuItem *mi = memProcessMenuItems[ndx + 2];
+			mi.hidden = YES;
+		}
+		return;
+	}
+	NSArray *topProcesses = [memTopProcesses runningProcessesByMemUsage:maxCount];
+	NSMenuItem *sepItem = memProcessMenuItems[0];
+	NSMenuItem *headerItem = memProcessMenuItems[1];
+	sepItem.hidden = (topProcesses.count == 0);
+	headerItem.hidden = (topProcesses.count == 0);
+	for (NSInteger ndx = 0; ndx < kMemProcessCountMax; ndx++) {
+		NSMenuItem *mi = memProcessMenuItems[ndx + 2];
+		if (ndx < (NSInteger)topProcesses.count) {
+			NSString *name = topProcesses[(NSUInteger)ndx][kMemProcessNameKey];
+			double memBytes = [topProcesses[(NSUInteger)ndx][kMemProcessMemBytesKey] doubleValue];
+			NSString *memStr;
+			if (memBytes >= 1073741824.0) {
+				memStr = [NSString stringWithFormat:@"%.1f %@", memBytes / 1073741824.0, [localizedStrings objectForKey:kGBLabel]];
+			} else {
+				memStr = [NSString stringWithFormat:@"%.0f %@", memBytes / 1048576.0, [localizedStrings objectForKey:kMBLabel]];
+			}
+			NSString *title = [NSString stringWithFormat:@"%@  %@", name, memStr];
+			mi.title = title;
+			mi.hidden = NO;
+
+			NSNumber *pid = topProcesses[(NSUInteger)ndx][kMemProcessPIDKey];
+			NSRunningApplication *app = [NSRunningApplication runningApplicationWithProcessIdentifier:pid.intValue];
+			NSImage *icon = app.icon;
+			if (!icon) {
+				static NSImage *defaultIcon = nil;
+				if (!defaultIcon) {
+					defaultIcon = [[NSWorkspace sharedWorkspace] iconForFile:@"/bin/bash"];
+				}
+				icon = defaultIcon;
+			}
+			icon = [icon copy];
+			icon.size = NSMakeSize(16, 16);
+			mi.image = icon;
+		} else {
+			mi.title = @"";
+			mi.hidden = YES;
+			mi.image = nil;
+		}
+	}
+}
 
 ///////////////////////////////////////////////////////////////
 //

@@ -4,6 +4,11 @@
 //
 
 #import "MenuMeterGPUExtra.h"
+// Public IOAccelerator GPU reader fallback (YuyaIwata/MenuMeters
+// add-gpu-meter branch, GPL-2.0): same source Activity Monitor uses for
+// its GPU history; works on Apple Silicon and Intel/AMD without
+// entitlements. Used only when the private IOReport sample is unavailable.
+#import "gpu_reader.h"
 
 #define kGPUTitle                  @"GPU:"
 #define kGPUUsageTitle             @"GPU Usage:"
@@ -28,6 +33,13 @@
 - (NSString *)memoryString:(uint64_t)bytes;
 - (double)gpuTotalPowerWatts;
 - (CGFloat)textBlockWidthForLabel:(NSString *)label sampleValue:(NSString *)value;
+// Refresh the public-API fallback sample (see gpu_reader.h). Called
+// wherever currentSample is refreshed.
+- (void)refreshPublicGpuFallback;
+// Effective GPU usage/memory: prefer the private IOReport sample, fall
+// back to the public IOAccelerator reader when unavailable.
+- (double)effectiveGpuUsagePercent;
+- (uint64_t)effectiveGpuMemoryBytes;
 @end
 
 @implementation MenuMeterGPUExtra
@@ -76,6 +88,13 @@
 
     [extraMenu addItem:[NSMenuItem separatorItem]];
     [self addStandardMenuEntriesTo:extraMenu];
+#if !TARGET_CPU_ARM64
+    [[extraMenu itemAtIndex:kGPUFrequencyInfoMenuIndex] setHidden:YES];
+    [[extraMenu itemAtIndex:kGPUPowerInfoMenuIndex] setHidden:YES];
+    [[extraMenu itemAtIndex:kGPUANEPowerInfoMenuIndex] setHidden:YES];
+    [[extraMenu itemAtIndex:kGPUBandwidthInfoMenuIndex] setHidden:YES];
+    [[extraMenu itemAtIndex:kGPUMediaInfoMenuIndex] setHidden:YES];
+#endif
 
     percentFormatter = [[NSNumberFormatter alloc] init];
     percentFormatter.minimumFractionDigits = 0;
@@ -97,6 +116,7 @@
 - (NSMenu *)menu
 {
     currentSample = [performanceReader currentSample];
+    [self refreshPublicGpuFallback];
     [self updateMenuContent];
     return extraMenu;
 }
@@ -104,11 +124,12 @@
 - (void)timerFired:(NSTimer *)timer
 {
     currentSample = [performanceReader currentSample];
-    if (currentSample.available && currentSample.gpuUsagePercent >= 0.0) {
+    [self refreshPublicGpuFallback];
+    if ([self effectiveGpuUsagePercent] >= 0.0) {
         if ([gpuHistory count] >= [ourPrefs gpuGraphLength]) {
             [gpuHistory removeObjectsInRange:NSMakeRange(0, [gpuHistory count] - [ourPrefs gpuGraphLength] + 1)];
         }
-        [gpuHistory addObject:@(currentSample.gpuUsagePercent)];
+        [gpuHistory addObject:@([self effectiveGpuUsagePercent])];
     }
     [self updateMenuWidth];
 
@@ -121,14 +142,16 @@
 - (void)updateMenuContent
 {
     NSString *unavailable = [[NSBundle mainBundle] localizedStringForKey:kGPUUnavailable value:nil table:nil];
-    NSString *usage = currentSample.gpuUsagePercent >= 0.0 ? [self percentString:currentSample.gpuUsagePercent] : unavailable;
+    double effectiveUsage = [self effectiveGpuUsagePercent];
+    uint64_t effectiveMemBytes = [self effectiveGpuMemoryBytes];
+    NSString *usage = effectiveUsage >= 0.0 ? [self percentString:effectiveUsage] : unavailable;
     NSString *frequency = currentSample.gpuFrequencyMHz > 0 ? [NSString stringWithFormat:@"%ld MHz", (long)currentSample.gpuFrequencyMHz] : unavailable;
     NSString *gpuWatts = [self gpuTotalPowerWatts] >= 0.0 ? [self wattsString:[self gpuTotalPowerWatts]] : unavailable;
     NSString *aneWatts = currentSample.anePowerWatts >= 0.0 ? [self wattsString:currentSample.anePowerWatts] : unavailable;
     NSString *bw = currentSample.bandwidthTotalGBs >= 0.0 ? [self bandwidthString:currentSample.bandwidthTotalGBs] : unavailable;
     NSString *media = currentSample.bandwidthMediaGBs >= 0.0 ? [self bandwidthString:currentSample.bandwidthMediaGBs] : unavailable;
-    NSString *mem = (currentSample.gpuMemoryInUseBytes > 0 || currentSample.gpuMemoryAllocBytes > 0)
-        ? [self memoryString:currentSample.gpuMemoryInUseBytes > 0 ? currentSample.gpuMemoryInUseBytes : currentSample.gpuMemoryAllocBytes]
+    NSString *mem = effectiveMemBytes > 0
+        ? [self memoryString:effectiveMemBytes]
         : unavailable;
 
     LiveUpdateMenuItemTitle(extraMenu, kGPUUsageInfoMenuIndex, [NSString stringWithFormat:@"%@ %@", [[NSBundle mainBundle] localizedStringForKey:kGPUUsageTitle value:nil table:nil], usage]);
@@ -159,7 +182,7 @@
     }
     if (mode & kGPUDisplayPercent) {
         [self addInterBlockGapAtX:&x];
-        [self appendTextBlockWithLabel:@"GPU" value:[self percentString:currentSample.gpuUsagePercent] atX:&x];
+        [self appendTextBlockWithLabel:@"GPU" value:[self percentString:[self effectiveGpuUsagePercent]] atX:&x];
     }
     if (mode & kGPUDisplayFrequency) {
         [self addInterBlockGapAtX:&x];
@@ -184,7 +207,7 @@
     }
     if (mode & kGPUDisplayMemory) {
         [self addInterBlockGapAtX:&x];
-        uint64_t bytes = currentSample.gpuMemoryInUseBytes > 0 ? currentSample.gpuMemoryInUseBytes : currentSample.gpuMemoryAllocBytes;
+        uint64_t bytes = [self effectiveGpuMemoryBytes];
         [self appendTextBlockWithLabel:@"MEM" value:[self memoryString:bytes] atX:&x];
     }
 
@@ -195,13 +218,17 @@
 {
     int mode = [ourPrefs gpuDisplayMode];
     // Quantize like SiliconScope: skip sub-pixel / sub-display noise.
-    int usageQ = currentSample.gpuUsagePercent >= 0 ? (int)llround(MIN(100.0, currentSample.gpuUsagePercent)) : -1;
+    // Usage/memory prefer the private sample, falling back to the public
+    // IOAccelerator reader (effective helpers).
+    double sigUsage = [self effectiveGpuUsagePercent];
+    uint64_t sigMemBytes = [self effectiveGpuMemoryBytes];
+    int usageQ = sigUsage >= 0 ? (int)llround(MIN(100.0, sigUsage)) : -1;
     int freqQ = (int)(currentSample.gpuFrequencyMHz / 10); // 10 MHz buckets
     int powerQ = [self gpuTotalPowerWatts] >= 0 ? (int)llround([self gpuTotalPowerWatts] * 10.0) : -1;
     int aneQ = currentSample.anePowerWatts >= 0 ? (int)llround(currentSample.anePowerWatts * 10.0) : -1;
     int bwQ = currentSample.bandwidthTotalGBs >= 0 ? (int)llround(currentSample.bandwidthTotalGBs * 10.0) : -1;
     int mediaQ = currentSample.bandwidthMediaGBs >= 0 ? (int)llround(currentSample.bandwidthMediaGBs * 10.0) : -1;
-    int memQ = (int)((currentSample.gpuMemoryInUseBytes > 0 ? currentSample.gpuMemoryInUseBytes : currentSample.gpuMemoryAllocBytes) / (16ull << 20));
+    int memQ = (int)(sigMemBytes / (16ull << 20));
     int histTail = 0;
     if (gpuHistory.count) {
         histTail = (int)llround(MIN(100.0, [gpuHistory.lastObject doubleValue]));
@@ -314,6 +341,39 @@
         return -1.0;
     }
     return currentSample.gpuPowerWatts + MAX(0.0, currentSample.gpuSRAMPowerWatts);
+}
+
+- (void)refreshPublicGpuFallback
+{
+    publicGpuUsageFallback = -1.0;
+    publicGpuMemoryFallback = 0;
+    // Only pay for the IOKit query when the private sample has gaps.
+    if (currentSample.gpuUsagePercent >= 0.0 &&
+        (currentSample.gpuMemoryInUseBytes > 0 || currentSample.gpuMemoryAllocBytes > 0)) {
+        return;
+    }
+    GPUStats stats = GPUReadStats();
+    publicGpuUsageFallback = stats.utilization;
+    publicGpuMemoryFallback = stats.inUseMemoryBytes;
+}
+
+- (double)effectiveGpuUsagePercent
+{
+    if (currentSample.gpuUsagePercent >= 0.0) {
+        return currentSample.gpuUsagePercent;
+    }
+    return publicGpuUsageFallback;
+}
+
+- (uint64_t)effectiveGpuMemoryBytes
+{
+    if (currentSample.gpuMemoryInUseBytes > 0) {
+        return currentSample.gpuMemoryInUseBytes;
+    }
+    if (currentSample.gpuMemoryAllocBytes > 0) {
+        return currentSample.gpuMemoryAllocBytes;
+    }
+    return publicGpuMemoryFallback;
 }
 
 - (CGFloat)textBlockWidthForLabel:(NSString *)label sampleValue:(NSString *)value

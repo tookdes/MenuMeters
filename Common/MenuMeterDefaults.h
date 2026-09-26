@@ -137,6 +137,8 @@
 - (void)saveMemCompressedColor:(NSColor *)color;
 - (void)saveMemPageInColor:(NSColor *)color;
 - (void)saveMemPageOutColor:(NSColor *)color;
+- (int)memMaxProcessCount;
+- (void)saveMemMaxProcessCount:(int)maxCount;
 
 // Net menu prefs
 - (double)netInterval;
@@ -167,5 +169,7 @@
 - (void)saveNetReceiveColor:(NSColor *)color;
 - (void)saveNetInactiveColor:(NSColor *)color;
 - (void)saveNetPreferInterface:(NSString *)interface;
+- (int)netMaxProcessCount;
+- (void)saveNetMaxProcessCount:(int)maxCount;
 
 @end

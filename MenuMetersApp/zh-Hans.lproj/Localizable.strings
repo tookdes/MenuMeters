@@ -13,6 +13,7 @@
 "Memory Bandwidth" = "内存带宽";
 "Media Engine" = "媒体引擎";
 "GPU Memory" = "GPU 内存";
+"Apple Silicon only" = "仅 Apple Silicon";
 "CPU Power" = "CPU 功耗";
 // Disk pane
 "Arrows" = "箭头";
@@ -92,6 +93,8 @@
 
 // Top CPU processes title
 "Top CPU Intensive Processes:" = "CPU 占用最高的进程：";
+"Top Memory Processes:" = "内存占用最高的进程：";
+"Top Network Processes:" = "网络占用最高的进程：";
 
 // GPU menu titles
 "GPU:" = "GPU：";

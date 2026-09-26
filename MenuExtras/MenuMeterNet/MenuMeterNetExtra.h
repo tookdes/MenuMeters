@@ -29,6 +29,7 @@
 #import "MenuMeterNetConfig.h"
 #import "MenuMeterNetStats.h"
 #import "MenuMeterNetPPP.h"
+#import "MenuMeterNetTopProcesses.h"
 #import "MenuMeterWorkarounds.h"
 
 
@@ -57,6 +58,10 @@
 	// Cached dictionary of menu items that can be updated
 	NSMutableDictionary				*updateMenuItems;
 	NSFont							*throughputFont;
+	// Top network processes (ported from leeliu/MenuMeters v2.2.0, GPL-2.0).
+	// Additive only: existing interface/throughput sections are preserved.
+	MenuMeterNetTopProcesses			*netTopProcesses;
+	NSMutableArray					*netProcessInsertedItems;
 
 } // MenuMeterNetExtra
 

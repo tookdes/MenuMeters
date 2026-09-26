@@ -124,6 +124,11 @@
 -(void)timerFired:(id)notused
 {
     [self updateStatusItemImage];
+    // NOTE: we intentionally do not post hiddenBySystem here.
+    // The old isInstalledButHiddenBySystem check (CGWindowList on-screen
+    // scan) false-fires on notched Macs and on macOS 26 Tahoe (see
+    // YuyaIwata/MenuMeters: Tahoe no longer lists status-item windows,
+    // plus its own "Allow in the Menu Bar" control). Cf. P0 consolidation.
 	/*    NSImage*image=self.image;
     NSImage*canvas=[NSImage imageWithSize:image.size flipped:NO drawingHandler:^BOOL(NSRect dstRect) {
         [[[NSColor systemGrayColor] colorWithAlphaComponent:.3] setFill];

@@ -71,6 +71,8 @@
 
 // Memory usage title menu item
 "Memory Usage:" = "Speicheraufteilung:";
+"Top Memory Processes:" = "Speicherintensivste Prozesse:";
+"Top Network Processes:" = "Netzwerkintensivste Prozesse:";
 
 // Format string for memory usage. Float conversion to X.XX is
 // automatically localized by NSNumberFormatter and is therefore not exposed
@@ -187,3 +189,5 @@
 "External" = "Extern";
 "Using this feature for the first time will bring up two alerts by the system" = "Bei der ersten Verwendung dieser Funktion zeigt das System zwei Warnungen an";
 "This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accessibility features." = "Diese Funktion verwendet AppleScript und System Events, um einen Klick zu simulieren und zu einem bestimmten Bereich der Aktivitätsanzeige zu wechseln. Dafür sind 1. eine Bestätigung, dass MenuMeters AppleScript verwenden darf, und 2. die Freigabe der Bedienungshilfen für MenuMeters unter Datenschutz & Sicherheit in den Systemeinstellungen erforderlich.";
+
+"Apple Silicon only" = "nur Apple Silicon";

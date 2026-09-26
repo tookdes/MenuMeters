@@ -51,6 +51,8 @@
 "CPU power limit:" = "CPU Güç Limiti:";
 "speed %@%%, scheduler %@%%" = "hız %@%%, zamanlayıcı %@%%";
 "Top CPU Intensive Processes:" = "CPU'yu En Çok Kullanan İşlemler:";
+"Top Memory Processes:" = "En Çok Bellek Kullanan İşlemler:";
+"Top Network Processes:" = "En Çok Ağ Kullanan İşlemler:";
 
 // Open Process Viewer/Open Console
 "Open Process Viewer" = "İşlem Görüntüleyicisi'ni Aç";
@@ -218,3 +220,5 @@
 "External" = "Harici";
 "Using this feature for the first time will bring up two alerts by the system" = "Bu özellik ilk kez kullanıldığında sistem iki uyarı gösterecektir";
 "This feature uses AppleScript and System Events to simulate a click to switch to a specific pane of the Activity Monitor. This requires 1. one confirmation dialog to allow MenuMeters to use AppleScript, and 2. a trip to the Security & Privacy pane of the System Preferences to allow MenuMeters to use Accessibility features." = "Bu özellik, bir tıklamayı taklit ederek Etkinlik Monitörü’nün belirli bir paneline geçmek için AppleScript ve Sistem Olayları’nı kullanır. Bunun için 1. MenuMeters’ın AppleScript kullanmasına izin veren bir onay ve 2. Sistem Ayarları'ndaki Gizlilik ve Güvenlik bölümünde MenuMeters için Erişilebilirlik izni gerekir.";
+
+"Apple Silicon only" = "yalnızca Apple Silicon";

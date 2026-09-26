@@ -51,6 +51,11 @@ enum {
 };
 #define kGPUDisplayDefault              (kGPUDisplayPercent | kGPUDisplayGraph)
 #define kGPUDisplayValidFlags           (kGPUDisplayPercent | kGPUDisplayGraph | kGPUDisplayFrequency | kGPUDisplayPower | kGPUDisplayANEPower | kGPUDisplayBandwidth | kGPUDisplayMedia | kGPUDisplayMemory)
+#if TARGET_CPU_ARM64
+#define kGPUDisplaySupportedFlags       kGPUDisplayValidFlags
+#else
+#define kGPUDisplaySupportedFlags       (kGPUDisplayPercent | kGPUDisplayGraph | kGPUDisplayMemory)
+#endif
 
 // Timer
 #define kGPUUpdateIntervalMin           0.5
