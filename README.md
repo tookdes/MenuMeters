@@ -2,7 +2,14 @@
 
 This is a maintained personal fork of [yujitach/MenuMeters](https://github.com/yujitach/MenuMeters), built as a standalone macOS menu bar app.
 
-The current fork release is `2.1.6.7`. It keeps the original MenuMeters behavior, improves Chinese localization, and adds Apple Silicon GPU/ANE monitoring.
+The current fork release is `2.1.6.8`. It keeps the original MenuMeters behavior, improves Chinese localization, and adds Apple Silicon GPU/ANE monitoring.
+
+## What's New In 2.1.6.8
+
+- Added Top Memory and Top Network process lists in the Memory and Network menus.
+- Added a public IOAccelerator GPU fallback so usage and memory still work when IOReport is missing, including Intel/AMD.
+- Hardened process sampling: private temp dir, complete UTF-8 line buffering, no leftover `top`/`nettop`, and Memory rows on first open.
+- Intel GPU preferences now expose Percentage, Graph, and GPU Memory; Apple Silicon-only meters stay marked as such.
 
 ## What's New In 2.1.6.7
 
