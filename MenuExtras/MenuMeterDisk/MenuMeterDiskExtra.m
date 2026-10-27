@@ -404,10 +404,11 @@ static BOOL MMDiskSampleIsSelected(MenuMeterDiskIOSample *sample, NSArray *selec
 
 - (void)configFromPrefs:(NSNotification *)notification {
 
+    // configDisplay creates the menu, which uses this color immediately.
+    [self setupColor:nil];
 #ifdef ELCAPITAN
     [super configDisplay:kDiskMenuBundleID fromPrefs:ourPrefs withTimerInterval:[ourPrefs diskInterval]];
 #endif
-    [self setupColor:nil];
 
     int mode = [ourPrefs diskDisplayMode];
 
